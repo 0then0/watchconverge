@@ -6,6 +6,9 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
 const mode = process.argv[2];
+// Windows directory handles can prevent renaming a watched child directory.
+// A native recursive subscription keeps only the stable root watched there.
+const recursiveRoot = process.platform === 'win32';
 let root,
   index = new Map(),
   watches = new Map(),
@@ -46,12 +49,14 @@ function reconcile() {
   try {
     const { output, dirs } = scan();
     // Retain root and existing directories; discard watches for paths invalidated by rename.
-    for (const [path, watcher] of watches)
-      if (!dirs.includes(path)) {
-        watcher.close();
-        watches.delete(path);
-      }
-    for (const dir of dirs) if (!watches.has(dir)) attachDirectory(dir);
+    if (!recursiveRoot) {
+      for (const [path, watcher] of watches)
+        if (!dirs.includes(path)) {
+          watcher.close();
+          watches.delete(path);
+        }
+      for (const dir of dirs) if (!watches.has(dir)) attachDirectory(dir);
+    }
     index = output;
     complete('directory invalidation reconciliation');
   } catch (e) {
@@ -59,7 +64,7 @@ function reconcile() {
   }
 }
 function attachDirectory(dir) {
-  const watcher = watch(join(root, dir), (event, filename) => {
+  const watcher = watch(join(root, dir), { recursive: recursiveRoot }, (event, filename) => {
     send({
       type: 'event',
       event,
@@ -113,9 +118,9 @@ input.on('line', (line) => {
       index = scan().output;
       if (mode === 'broken') {
         for (const entry of index.values()) if (entry.type === 'file') attachFile(entry.path);
-      } else if (mode === 'fixed') {
+      } else if (mode === 'fixed' && !recursiveRoot) {
         for (const dir of scan().dirs) if (!watches.has(dir)) attachDirectory(dir);
-      } else throw new Error('Expected fixed or broken mode');
+      } else if (mode !== 'fixed') throw new Error('Expected fixed or broken mode');
       revision++;
       send({
         type: 'ready',

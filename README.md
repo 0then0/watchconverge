@@ -75,7 +75,7 @@ Write to replacement · v2         DIVERGED
   index     SHA-256(v1\n)
 ```
 
-The **fixed consumer** watches directories and treats notifications, including null filenames, as invalidations. It reconciles its cache on those invalidations and updates directory subscriptions. Snapshot requests only serialize the cache. This small example is not a universal solution to watcher races, missing invalidations, overflows or concurrent writers. Neither consumer injects or artificially drops events. The inode demonstration is explicitly unsupported on Windows.
+The **fixed consumer** watches directories and treats notifications, including null filenames, as invalidations. It reconciles its cache on those invalidations. Linux/macOS use directory subscriptions; Windows uses a native recursive root subscription so watched child-directory handles do not prevent renames. Snapshot requests only serialize the cache. This small example is not a universal solution to watcher races, missing invalidations, overflows or concurrent writers. Neither consumer injects or artificially drops events. The inode demonstration is explicitly unsupported on Windows.
 
 You can import a scenario in the UI or replay it from the CLI. See the [scenario format](docs/scenarios.md) for operations, validation and size limits.
 
