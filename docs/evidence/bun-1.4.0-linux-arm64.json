@@ -1,0 +1,403 @@
+{
+  "case": "oven-sh/bun#36328",
+  "startedAt": "2026-10-25T07:22:17.037Z",
+  "runtime": "1.4.0",
+  "revision": "34cbb9a40b4bd1bd767d134a7065e66c2432a676",
+  "platform": "linux/arm64",
+  "kernel": "7.0.14-linuxkit",
+  "observationWindowMs": 700,
+  "status": "pass",
+  "trials": [
+    {
+      "trial": 1,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 2,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 3,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 4,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 5,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 6,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 7,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 8,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 9,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    },
+    {
+      "trial": 10,
+      "status": "pass",
+      "disk": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "index": [
+        {
+          "path": "app.tsx",
+          "type": "file",
+          "hash": "3bfc269594ef649228e9a74bab00f042efc91d5acc6fbee31a382e80d42388fe"
+        }
+      ],
+      "differences": [],
+      "samples": 1,
+      "events": [
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "change",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx.tmp"
+        },
+        {
+          "event": "rename",
+          "path": "app.tsx"
+        }
+      ],
+      "destinationNamed": true
+    }
+  ],
+  "cleaned": true
+}

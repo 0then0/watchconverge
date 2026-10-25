@@ -1,0 +1,88 @@
+// Protocol fault fixtures only. These are never used as watcher demonstrations.
+
+import { createHash } from 'node:crypto';
+import { lstatSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createInterface } from 'node:readline';
+
+const mode = process.argv[2],
+  input = createInterface({ input: process.stdin });
+const send = (m) => process.stdout.write(`${JSON.stringify({ v: 1, ...m })}\n`);
+let entries = [],
+  revision = 100,
+  root,
+  snapshots = 0;
+const interval = setInterval(() => {}, 1000);
+input.on('line', (line) => {
+  const m = JSON.parse(line);
+  if (m.type === 'init') {
+    root = m.root;
+    entries = readdirSync(root)
+      .filter((n) => lstatSync(join(root, n)).isFile())
+      .map((path) => ({
+        path,
+        type: 'file',
+        hash: createHash('sha256')
+          .update(readFileSync(join(root, path)))
+          .digest('hex'),
+      }));
+    if (mode === 'no-ready') return;
+    if (mode === 'exit') process.exit(7);
+    if (mode === 'invalid-json') return process.stdout.write('hello logs on stdout\n');
+    if (mode === 'oversize') return process.stdout.write('x'.repeat(1024 * 1024 + 1));
+    const ready = {
+      type: 'ready',
+      id: m.id,
+      projection: {
+        paths: 'relative-posix',
+        types: ['file', 'directory'],
+        hash: 'sha256',
+        excludes: [],
+      },
+    };
+    if (mode === 'bad-version') ready.v = 2;
+    if (mode === 'bad-id') ready.id = 'wrong';
+    send(ready);
+    if (mode === 'duplicate') send(ready);
+    if (mode === 'stderr') process.stderr.write('indexer log\n');
+  } else if (m.type === 'snapshot') {
+    snapshots++;
+    if (mode === 'no-snapshot') return;
+    if (mode === 'snapshot-exit') process.exit(9);
+    if (mode === 'bad-hash') entries[0].hash = 'not-sha256';
+    if (mode === 'regression') revision--;
+    if (mode === 'baseline-mismatch') entries = [];
+    const response = {
+      type: 'snapshot',
+      id: m.id,
+      entries,
+      revision,
+      processing:
+        mode === 'processing' ||
+        (mode === 'late-processing' && snapshots > 1) ||
+        (mode === 'late-idle' && snapshots % 2 === 0),
+    };
+    if (
+      (mode === 'late-response' && snapshots > 1) ||
+      (mode === 'late-idle' && snapshots > 1 && snapshots % 2 === 1)
+    )
+      setTimeout(() => send(response), 200);
+    else send(response);
+  } else if (m.type === 'stop') {
+    if (mode === 'no-stop') return;
+    if (mode === 'stop-exit' || mode === 'stop-signal') {
+      process.stdout.write(`${JSON.stringify({ v: 1, type: 'stopped', id: m.id })}\n`, () =>
+        mode === 'stop-exit' ? process.exit(7) : process.kill(process.pid, 'SIGTERM'),
+      );
+      return;
+    }
+    send({ type: 'stopped', id: m.id });
+    if (mode === 'stop-hangs') return;
+    clearInterval(interval);
+    input.close();
+    process.stdin.pause();
+  }
+});
+input.on('close', () => {
+  if (mode !== 'stop-hangs') clearInterval(interval);
+});
