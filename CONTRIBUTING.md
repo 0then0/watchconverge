@@ -25,7 +25,7 @@ npm run validate   # All checks, in the order required by CI
 
 Run `npm run build` before browser tests. On Linux, `npx playwright install --with-deps chromium` also installs the browser's system prerequisites. These commands use disposable local resources; none needs a production service or user-supplied target tree.
 
-`npm run check:fix` applies safe Biome fixes; `npm run format` formats supported source and configuration files. The lockfile, generated output and captured regression evidence are excluded from formatting. Keep functional changes focused and add tests for observable behavior rather than duplicating the implementation. Use Conventional Commits in English.
+`npm run check:fix` applies safe Biome fixes; `npm run format` formats supported source and configuration files. Git checks out text files with LF endings on every platform, matching Biome's configuration. The lockfile, generated output and captured regression evidence are excluded from formatting. Keep functional changes focused and add tests for observable behavior rather than duplicating the implementation. Use Conventional Commits in English.
 
 ## Source layout
 
