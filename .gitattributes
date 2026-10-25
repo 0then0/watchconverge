@@ -1,1 +1,11 @@
+# Consistent source checkouts on Linux, macOS and Windows.
 * text=auto eol=lf
+
+# Keep binary assets unchanged.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff2 binary

@@ -129,3 +129,7 @@ npm run validate
 Scenario operations have no target-directory option and run only in fresh tool-owned temporary trees. The server binds to `127.0.0.1`, rejects foreign Host/Origin requests and requires JSON plus a custom header for mutations. Adapter code remains trusted code with normal process permissions.
 
 WatchConverge v0.1 handles regular files and directories on local filesystems. It does not provide a watcher backend, cloud service, kernel fault injection, network-filesystem testing or universal build-system validation. Normal completion, cancellation and error paths clean up the temporary tree; abrupt host termination or power loss can prevent cleanup. See [LICENSE](LICENSE) for Apache-2.0 terms.
+
+## Project information
+
+See the [changelog](CHANGELOG.md) for release changes, [contribution guide](CONTRIBUTING.md) for development, [code of conduct](CODE_OF_CONDUCT.md) for community expectations and [security policy](SECURITY.md) for private vulnerability reports. Source releases are available on [GitHub Releases](https://github.com/0then0/watchconverge/releases); this project is not published to npm.

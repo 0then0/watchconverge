@@ -10,7 +10,7 @@ npx playwright install chromium
 npm run dev
 ```
 
-The development UI runs at [http://127.0.0.1:4317](http://127.0.0.1:4317). `npm run build` creates the production UI in `dist`; `npm start` serves that build. The CLI runs directly from TypeScript source through Node's native type stripping. Type checking uses TypeScript 7; Node types follow the Node 24 runtime used in validation.
+The development UI runs at [http://127.0.0.1:4317](http://127.0.0.1:4317). `npm run build` creates the production UI in `dist`; `npm start` serves that build. The CLI runs directly from TypeScript source through Node's native type stripping. Type checking uses TypeScript 7; Node type declarations are development dependencies; CI checks the supported Node 22 and 24 runtimes.
 
 ## Run checks
 
@@ -49,3 +49,11 @@ All scenario writes must stay in tool-owned temporary trees. Symlinks must not b
 Open an [issue](https://github.com/0then0/watchconverge/issues) with the operating system, Node version, scenario, adapter command and observed result. Attach an exported scenario/result or HTML report when possible. Redact command arguments and logs containing secrets or personal paths. Distinguish cached-state divergence from notification evidence, and include any readiness, process or cleanup error.
 
 For a runtime-specific watcher regression, provide the actual runtime version/revision and a minimal script using real watcher APIs. Record unsupported environments explicitly rather than substituting synthetic event loss.
+
+## Community and security
+
+Follow the [code of conduct](CODE_OF_CONDUCT.md) in project spaces. Report vulnerabilities through the private channel described in [SECURITY.md](SECURITY.md), not a public issue. Use the issue and pull request templates to include reproducible evidence.
+
+## Release process
+
+The maintainer releases from a clean main branch after the six-platform/runtime CI matrix passes. Update the package version and lockfile together, add user-facing changes to [CHANGELOG.md](CHANGELOG.md), and verify `npm run validate`. Create a GitHub release with a matching `vX.Y.Z` tag at the validated commit using `gh release create`; do not publish the private npm package. GitHub provides source archives. Installation from a release still requires Node, `npm ci` and `npm run build`.

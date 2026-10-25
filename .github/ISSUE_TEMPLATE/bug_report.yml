@@ -1,0 +1,33 @@
+name: Bug report
+description: Report incorrect behavior with a reproducible local case.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: Redact secrets and personal paths. Use private reporting for vulnerabilities.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: WatchConverge version or commit, OS, filesystem, Node version, adapter/runtime version.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Commands, selected scenario and adapter, or an exported scenario using disposable fixtures.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+      description: Include the verdict, checkpoint and disk/index differences. A notification count alone does not establish event loss.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Sanitized result JSON, report, logs, readiness/process errors and cleanup outcome.
