@@ -85,7 +85,7 @@ def main():
         try:
             for line in sys.stdin:
                 lines.put(line)
-        except Exception as error:
+        except (OSError, ValueError) as error:
             input_errors.append(error)
         finally:
             lines.put(None)
@@ -191,8 +191,10 @@ def main():
 
 
 if __name__ == "__main__":
+    from fff import FFFException
+
     try:
         main()
-    except Exception as error:
+    except (FFFException, OSError, ValueError, RuntimeError) as error:
         diagnostic(f"FFF adapter error: {type(error).__name__}: {error}", "error")
         sys.exit(1)

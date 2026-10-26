@@ -16,12 +16,21 @@ WRAPPER = """import fff,json,runpy,sys
 from types import SimpleNamespace
 real = fff.FileFinder
 phase = sys.argv[2]
+if phase in ("input-os-error", "input-unicode-error"):
+    class BrokenInput:
+        def __iter__(self):
+            if phase == "input-os-error":
+                raise OSError("Injected stdin failure")
+            raise UnicodeDecodeError("utf-8", b"\\xff", 0, 1, "injected invalid UTF-8")
+    sys.stdin = BrokenInput()
 class PendingFinder:
     def __init__(self, finder):
         self.finder = finder
     @property
     def scan_progress(self):
         p = self.finder.scan_progress
+        if phase == "snapshot-error":
+            return p
         return SimpleNamespace(
             is_scanning=True if phase == "scanning" else p.is_scanning,
             is_watcher_ready=False,
@@ -30,8 +39,10 @@ class PendingFinder:
         )
     def close(self):
         self.finder.close()
+    def glob(self, *args, **kwargs):
+        raise fff.FFFException("Injected snapshot failure")
 def create(*args, **kwargs):
-    if phase != "ready":
+    if phase in ("scanning", "watcher"):
         kwargs["watch"] = False
     finder = real(*args, **kwargs)
     return finder if phase == "ready" else PendingFinder(finder)
@@ -105,9 +116,9 @@ class LifecycleTests(unittest.TestCase):
             if predicate(message):
                 return message
 
-    def assert_clean_exit(self, child, resources):
+    def assert_clean_exit(self, child, resources, expected_code=0):
         child.wait(timeout=2)
-        self.assertEqual(child.returncode, 0, child.stderr.read())
+        self.assertEqual(child.returncode, expected_code, child.stderr.read())
         self.assertEqual(
             list(resources.iterdir()),
             [],
@@ -123,7 +134,7 @@ class LifecycleTests(unittest.TestCase):
             ):
                 self.wait_for(
                     messages,
-                    lambda m: (
+                    lambda m, phase=phase: (
                         "progress" in m
                         and m["progress"]["is_scanning"] == (phase == "scanning")
                         and not m["progress"]["is_watcher_ready"]
@@ -162,6 +173,35 @@ class LifecycleTests(unittest.TestCase):
             )
             child.terminate()
             self.assert_clean_exit(child, resources)
+
+    def test_input_stream_errors_are_fatal_not_clean_eof(self):
+        for phase, error_type in (
+            ("input-os-error", "OSError"),
+            ("input-unicode-error", "UnicodeDecodeError"),
+        ):
+            with (
+                self.subTest(phase=phase),
+                self.adapter(phase, initialize=False) as (child, messages, resources),
+            ):
+                error = messages.get(timeout=5)
+                self.assertIsNotNone(error)
+                self.assertEqual(error["type"], "diagnostic")
+                self.assertEqual(error["level"], "error")
+                self.assertIn(error_type, error["message"])
+                self.assert_clean_exit(child, resources, expected_code=1)
+
+    def test_sdk_snapshot_error_is_fatal_not_absence(self):
+        with self.adapter("snapshot-error") as (child, messages, resources):
+            self.wait_for(messages, lambda m: m["type"] == "ready")
+            child.stdin.write(json.dumps({"v": 1, "type": "snapshot", "id": "r2"}) + "\n")
+            child.stdin.flush()
+            error = messages.get(timeout=5)
+            self.assertIsNotNone(error)
+            self.assertEqual(error["type"], "diagnostic")
+            self.assertEqual(error["level"], "error")
+            self.assertIn("FFFException: Injected snapshot failure", error["message"])
+            self.assertNotIn("entries", error)
+            self.assert_clean_exit(child, resources, expected_code=1)
 
 
 if __name__ == "__main__":

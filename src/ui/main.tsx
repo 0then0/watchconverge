@@ -140,7 +140,7 @@ function App() {
         <a className="brand" href="/" aria-label="WatchConverge home">
           <img src="/icon.svg" alt="" width="36" height="36" />
           <span>
-            WatchConverge<span className="version">v0.1</span>
+            WatchConverge<span className="version">v0.2</span>
           </span>
         </a>
         <div className="header-tools">
@@ -528,7 +528,7 @@ function App() {
           </div>
         </section>
         <footer>
-          <span>WatchConverge / v0.1</span>
+          <span>WatchConverge / v0.2</span>
           <span>Local files. Bounded observations. Explicit scope.</span>
         </footer>
       </main>
