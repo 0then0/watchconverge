@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Checkpoint, Entry, Observation, RunResult, Scenario } from '../core/model.ts';
+import { describeProjection } from '../core/model.ts';
 import { parseScenario } from '../core/scenarios.ts';
 import './style.css';
 
@@ -363,7 +364,7 @@ function App() {
                         : result.status === 'stopped'
                           ? 'Run stopped.'
                           : result.status === 'unsupported'
-                            ? 'Unsupported on this platform.'
+                            ? 'Scenario is not applicable.'
                             : 'Convergence is unconfirmed.'
                     : 'Ready to compare disk and index.'}
               </h3>
@@ -409,11 +410,26 @@ function App() {
             <span className="node" />
             <p>
               {result?.projection
-                ? `Projection: ${result.projection.types.join(' + ')} · relative POSIX paths · SHA-256. Excluded prefixes: ${result.projection.excludes.join(', ') || 'none'}.`
+                ? `Projection: ${describeProjection(result.projection)}`
                 : 'Default projection: files + directories · relative paths · SHA-256 content.'}
               <br />
               Metadata is outside this check. Symlinks are not followed. PASS applies only to the
               selected projection, scenario and checked checkpoints.
+              {result?.limitations.map((limitation) => (
+                <React.Fragment key={limitation}>
+                  <br />
+                  {limitation}
+                </React.Fragment>
+              ))}
+              {result?.assertions
+                .filter((a) => !a.checked)
+                .map((a, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Assertions follow immutable scenario steps.
+                  <React.Fragment key={i}>
+                    <br />
+                    NOT APPLICABLE: {a.step}. {a.reason}
+                  </React.Fragment>
+                ))}
             </p>
           </div>
         </section>
@@ -523,7 +539,9 @@ function EntryView({ entry }: { entry?: Entry }) {
   return entry ? (
     <>
       <span className="entry-type">{entry.type}</span>
-      {entry.type === 'file' && <code title={entry.hash}>{entry.hash}</code>}
+      {entry.type === 'file' && (
+        <code title={entry.hash}>{entry.hash ?? 'content not checked'}</code>
+      )}
     </>
   ) : (
     <span className="absent">absent</span>
@@ -550,8 +568,12 @@ function Comparison({ checkpoint }: { checkpoint?: Checkpoint }) {
         <>
           <div className="comparison-stats micro">
             {checkpoint.differences.length} DIFFERENCES · {checkpoint.samples} SAMPLES ·{' '}
-            {checkpoint.observedMs} MS · REVISION {checkpoint.revision} ·{' '}
-            {checkpoint.processing ? 'PROCESSING PENDING' : 'CONSUMER IDLE'}
+            {checkpoint.observedMs} MS · REVISION {checkpoint.revision ?? 'UNAVAILABLE'} ·{' '}
+            {checkpoint.processing === null
+              ? 'PROCESSING UNAVAILABLE'
+              : checkpoint.processing
+                ? 'PROCESSING PENDING'
+                : 'CONSUMER IDLE'}
           </div>
           {paths.length ? (
             paths.map((path) => {

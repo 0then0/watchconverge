@@ -2,7 +2,7 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { validPath } from './compare.ts';
-import type { Entry, Projection } from './model.ts';
+import { DEFAULT_PROJECTION, type Entry, type Projection, type SnapshotSignals } from './model.ts';
 
 export class AdapterError extends Error {
   code: string;
@@ -16,7 +16,7 @@ export function parseProjection(value: unknown): Projection {
   const p = value as Projection | undefined;
   if (
     p?.paths !== 'relative-posix' ||
-    p.hash !== 'sha256' ||
+    (p.hash !== 'sha256' && p.hash !== 'none') ||
     !Array.isArray(p.types) ||
     !p.types.length ||
     p.types.some((t) => t !== 'file' && t !== 'directory') ||
@@ -27,11 +27,11 @@ export function parseProjection(value: unknown): Projection {
   )
     throw new AdapterError(
       'protocol',
-      'Unsupported projection; expected relative-posix, file/directory, sha256 and literal exclude prefixes',
+      'Unsupported projection; expected relative-posix, file/directory, explicit hash sha256 or none and literal exclude prefixes',
     );
   return p;
 }
-export function parseEntries(value: unknown): Entry[] {
+export function parseEntries(value: unknown, projection: Projection = DEFAULT_PROJECTION): Entry[] {
   if (!Array.isArray(value) || value.length > 10000)
     throw new AdapterError('protocol', 'Invalid or oversized snapshot');
   const seen = new Set<string>();
@@ -41,20 +41,24 @@ export function parseEntries(value: unknown): Entry[] {
       !validPath(e.path) ||
       seen.has(e.path) ||
       (e.type !== 'file' && e.type !== 'directory') ||
-      (e.type === 'file' && (typeof e.hash !== 'string' || !/^[a-f0-9]{64}$/.test(e.hash)))
+      (e.type === 'file' &&
+        (projection.hash === 'sha256' || e.hash !== undefined) &&
+        (typeof e.hash !== 'string' || !/^[a-f0-9]{64}$/.test(e.hash)))
     )
       throw new AdapterError('protocol', 'Invalid snapshot entry, hash or duplicate path');
     seen.add(e.path);
   }
   return value.map((e) =>
-    e.type === 'file'
+    e.type === 'file' && projection.hash === 'sha256'
       ? { path: e.path, type: 'file', hash: e.hash }
-      : { path: e.path, type: 'directory' },
+      : { path: e.path, type: e.type },
   );
 }
 
 export class AdapterClient {
   child: ChildProcessWithoutNullStreams;
+  snapshotSignals: SnapshotSignals = 'reported';
+  private projection?: Projection;
   private pending = new Map<
     string,
     {
@@ -214,20 +218,34 @@ export class AdapterClient {
   }
   async ready(root: string, timeoutMs: number): Promise<Projection> {
     const message = await this.request('init', 'ready', { root }, timeoutMs);
-    return parseProjection(message.projection);
+    if (
+      message.snapshotSignals !== undefined &&
+      message.snapshotSignals !== 'reported' &&
+      message.snapshotSignals !== 'unavailable'
+    )
+      throw new AdapterError('protocol', 'Invalid snapshotSignals declaration');
+    this.snapshotSignals = message.snapshotSignals ?? 'reported';
+    this.projection = parseProjection(message.projection);
+    return this.projection;
   }
   async snapshot(timeoutMs: number) {
+    if (!this.projection) throw new AdapterError('protocol', 'Snapshot before readiness');
     const m = await this.request('snapshot', 'snapshot', {}, timeoutMs);
     if (
-      !Number.isSafeInteger(m.revision) ||
-      Number(m.revision) < 0 ||
-      typeof m.processing !== 'boolean'
+      this.snapshotSignals === 'unavailable'
+        ? m.revision !== null || m.processing !== null
+        : !Number.isSafeInteger(m.revision) ||
+          Number(m.revision) < 0 ||
+          typeof m.processing !== 'boolean'
     )
-      throw new AdapterError('protocol', 'Snapshot requires revision and processing');
+      throw new AdapterError(
+        'protocol',
+        'Snapshot requires declared revision and processing signals',
+      );
     return {
-      entries: parseEntries(m.entries),
-      revision: Number(m.revision),
-      processing: m.processing,
+      entries: parseEntries(m.entries, this.projection),
+      revision: m.revision as number | null,
+      processing: m.processing as boolean | null,
     };
   }
   async close(): Promise<void> {

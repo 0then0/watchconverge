@@ -13,19 +13,28 @@ let entries = [],
   root,
   snapshots = 0;
 const interval = setInterval(() => {}, 1000);
-input.on('line', (line) => {
-  const m = JSON.parse(line);
-  if (m.type === 'init') {
-    root = m.root;
-    entries = readdirSync(root)
-      .filter((n) => lstatSync(join(root, n)).isFile())
-      .map((path) => ({
+function initialEntries(relative = '') {
+  return readdirSync(join(root, relative)).flatMap((name) => {
+    const path = relative ? `${relative}/${name}` : name;
+    const stat = lstatSync(join(root, path));
+    if (stat.isDirectory()) return [{ path, type: 'directory' }, ...initialEntries(path)];
+    if (!stat.isFile()) return [];
+    return [
+      {
         path,
         type: 'file',
         hash: createHash('sha256')
           .update(readFileSync(join(root, path)))
           .digest('hex'),
-      }));
+      },
+    ];
+  });
+}
+input.on('line', (line) => {
+  const m = JSON.parse(line);
+  if (m.type === 'init') {
+    root = m.root;
+    entries = initialEntries();
     if (mode === 'no-ready') return;
     if (mode === 'exit') process.exit(7);
     if (mode === 'invalid-json') return process.stdout.write('hello logs on stdout\n');
@@ -42,6 +51,13 @@ input.on('line', (line) => {
     };
     if (mode === 'bad-version') ready.v = 2;
     if (mode === 'bad-id') ready.id = 'wrong';
+    if (mode.startsWith('paths-')) {
+      ready.projection.hash = 'none';
+      entries = entries.map(({ path, type }) => ({ path, type }));
+    }
+    if (mode === 'unavailable' || mode === 'unavailable-false')
+      ready.snapshotSignals = 'unavailable';
+    if (mode === 'missing-projection-hash') delete ready.projection.hash;
     send(ready);
     if (mode === 'duplicate') send(ready);
     if (mode === 'stderr') process.stderr.write('indexer log\n');
@@ -50,6 +66,9 @@ input.on('line', (line) => {
     if (mode === 'no-snapshot') return;
     if (mode === 'snapshot-exit') process.exit(9);
     if (mode === 'bad-hash') entries[0].hash = 'not-sha256';
+    if (mode === 'missing-hash') delete entries[0].hash;
+    if (mode === 'paths-error' && snapshots > 1)
+      return send({ type: 'diagnostic', level: 'error', message: 'snapshot export failed' });
     if (mode === 'regression') revision--;
     if (mode === 'baseline-mismatch') entries = [];
     const response = {
@@ -62,6 +81,11 @@ input.on('line', (line) => {
         (mode === 'late-processing' && snapshots > 1) ||
         (mode === 'late-idle' && snapshots % 2 === 0),
     };
+    if (mode === 'unavailable' || mode === 'undeclared-null') {
+      response.revision = null;
+      response.processing = null;
+    }
+    if (mode === 'unavailable-false') response.revision = null;
     if (
       (mode === 'late-response' && snapshots > 1) ||
       (mode === 'late-idle' && snapshots > 1 && snapshots % 2 === 1)

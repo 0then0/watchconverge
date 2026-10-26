@@ -61,6 +61,22 @@ test('CLI rejects unsafe scenario selection and options', async () => {
   assert.equal((await cli(['--window-ms', '-1'])).code, 2);
   assert.equal((await cli(['--adapter-json', '"not argv"'])).code, 2);
 });
+test('CLI prints path scope and content-only inapplicability without a misleading PASS', async () => {
+  const result = await cli([
+    '--scenario',
+    'burst',
+    '--adapter-json',
+    JSON.stringify([
+      process.execPath,
+      fileURLToPath(new URL('./fixtures/adapter.mjs', import.meta.url)),
+      'paths-frozen',
+    ]),
+  ]);
+  assert.equal(result.code, 4, result.stderr);
+  assert.match(result.stdout, /Projection:.*paths and types only; file content is not checked/);
+  assert.match(result.stdout, /NOT APPLICABLE: 20 overwrites/);
+  assert.match(result.stdout, /UNSUPPORTED:/);
+});
 test('documented npm command emits only JSON and preserves the divergence exit code', async () => {
   const passed = await cli(['--scenario', 'delete', '--json'], true);
   assert.equal(passed.code, 0, passed.stderr);

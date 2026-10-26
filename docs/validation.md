@@ -16,12 +16,13 @@ For targeted checks, use the commands in [CONTRIBUTING.md](../CONTRIBUTING.md). 
 
 ## What the tests establish
 
+- Projection regressions cover explicit mode validation, missing/malformed hashes, paths-only snapshots, content-only inapplicability, stale paths versus stale content, snapshot errors, unavailable signals, and projection/limitation retention in CLI, UI, JSON and HTML. The unreadable-content check requires a non-root POSIX user.
 - Comparison tests cover missing and extra paths, content and type mismatches, literal exclusion prefixes, path validation, directories and symlink exclusion.
 - Protocol tests cover request IDs, envelope/version validation, cached snapshots, monotonic revisions, readiness and request deadlines, process failure, clean shutdown, nonzero exits after stop, forced termination, cancellation between requests and temporary-tree cleanup.
 - Checkpoint tests distinguish an on-time idle match, repeated idle differences, pending processing, late matching responses and insufficient samples. A processing-pending sample cannot count as evidence of repeated idle divergence.
 - HTTP tests preserve non-ASCII scenario data across split UTF-8 transport chunks, reject invalid UTF-8 and ensure exports are bound to the requested run UUID.
 - CLI tests exercise exports, fresh-tree replay and the documented `npm run --silent cli` command, including JSON-only stdout and the divergence exit code.
-- Real-watcher tests run all built-in scenarios against the directory-invalidation consumer. The file-watch example demonstrates stale inode subscriptions on Linux/macOS; Windows reports that example as unsupported.
+- Real-watcher tests run all built-in scenarios against the directory-invalidation consumer. A test-only JSONL proxy also projects that existing cache to paths/types, verifying PASS after create/rename/delete with content-only assertions explicitly omitted. The file-watch example demonstrates stale inode subscriptions on Linux/macOS; Windows reports that example as unsupported.
 - Chromium tests exercise run/stop/error states, light/dark/system themes, malformed imports, stale-tab exports, notifications, disk/index differences and report downloads. The HTML report is opened through a local file URL without HTTP requests.
 
 A passing test suite validates these cases. It does not prove continuous index agreement, exhaustive watcher correctness or accessibility conformance.
@@ -69,3 +70,7 @@ Another run has replaced the result referenced by the link, or that result is no
 ### A result reports incomplete cleanup
 
 Read the error and retained root path in the result. Close any processes retaining files in that tree before removing it manually. Adapters must stop their own descendants; the runner terminates its direct child. Abrupt process or host termination can prevent cleanup even when normal error paths are covered.
+
+## Optional FFF lab
+
+The [FFF lab](../labs/fff/README.md) is isolated from npm runtime and CI. Its checked-in configuration fixes deadlines before three repetitions per scenario and mode. `runs.jsonl` keeps complete results, observations and differences, including failed readiness/infrastructure outcomes. Native SDK tests also verify a complete 150-file export, a static index that stays stale after disk changes, EOF before/during/after readiness, stop and SIGTERM, and removal of temporary databases/logs. Only the recorded macOS arm64 environment was exercised; do not infer other-platform support from the application's CI matrix.

@@ -1,0 +1,194 @@
+[
+  {
+    "mode": "watched",
+    "scenario": "create",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "create",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "create",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "delete",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "delete",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "delete",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "directory-rename",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "directory-rename",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "directory-rename",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "recreate",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "recreate",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "recreate",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "create",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "create",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "create",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "delete",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "delete",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "delete",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "directory-rename",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "directory-rename",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "directory-rename",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "recreate",
+    "repetition": 1,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "recreate",
+    "repetition": 2,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "recreate",
+    "repetition": 3,
+    "status": "error",
+    "message": "FFF adapter error: FFFException: Failed to open frecency database env: Operation not permitted (os error 1)",
+    "cleaned": true
+  }
+]

@@ -2,6 +2,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { describeProjection } from './core/model.ts';
 import { renderReport } from './core/report.ts';
 import { runScenario } from './core/runner.ts';
 import { parseScenario, scenarios } from './core/scenarios.ts';
@@ -72,6 +73,12 @@ try {
       await writeFile(join(directory, 'result.json'), JSON.stringify(result, null, 2));
       await writeFile(join(directory, 'report.html'), renderReport(result));
       console.error(`Exports: ${directory}`);
+    }
+    if (!values.json) {
+      if (result.projection) console.log(`Projection: ${describeProjection(result.projection)}`);
+      for (const limitation of result.limitations) console.log(`Not verified: ${limitation}`);
+      for (const assertion of result.assertions.filter((a) => !a.checked))
+        console.log(`NOT APPLICABLE: ${assertion.step}: ${assertion.reason}`);
     }
     console.log(
       values.json

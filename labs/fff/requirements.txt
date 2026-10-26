@@ -1,0 +1,3 @@
+# PyPI release 0.11.0; only the tested macOS arm64 wheel is authorized here.
+# Source archive and wheel provenance are recorded in README.md.
+fff-search==0.11.0 --hash=sha256:4d2296bfe8a60141772fa825003c22856f7b136661f684b8b4d7d9477a4050f5

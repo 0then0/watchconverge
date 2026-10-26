@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { compare, project } from './compare.ts';
 import { readDisk } from './disk.ts';
 import type { Checkpoint, Observation, Operation, RunResult, Scenario } from './model.ts';
+import { describeProjection } from './model.ts';
 import { AdapterClient, AdapterError } from './protocol.ts';
 import { parseScenario } from './scenarios.ts';
 
@@ -67,6 +68,8 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
     message: 'Creating an owned temporary tree',
     options,
     cleaned: false,
+    limitations: [],
+    assertions: [],
     checkpoints: [],
     observations: [],
   };
@@ -128,17 +131,30 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
     const tree = root;
     const projection = await adapterClient.ready(tree, options.readyTimeoutMs);
     result.projection = projection;
+    result.snapshotSignals = adapterClient.snapshotSignals;
+    result.limitations = [
+      'Metadata, symlinks, special files and continuous agreement between checkpoints are not checked.',
+      ...(projection.hash === 'none' ? ['File content freshness is not checked.'] : []),
+      ...(adapterClient.snapshotSignals === 'unavailable'
+        ? [
+            'Index revision and processing queue are unavailable; samples cannot establish idle convergence or PASS.',
+          ]
+        : []),
+    ];
     observe(
       'lifecycle',
       'Adapter ready; subscriptions and initial index established',
       result.projection,
     );
     let previousRevision = -1;
-    const checkpoint = async (name: string): Promise<Checkpoint> => {
+    const checkpoint = async (
+      name: string,
+      truth?: Awaited<ReturnType<typeof readDisk>>,
+    ): Promise<Checkpoint> => {
       const id = randomUUID();
       signal.throwIfAborted();
       adapterClient.assertHealthy();
-      const truth = await readDisk(tree, projection);
+      truth ??= await readDisk(tree, projection);
       const started = performance.now();
       const until = started + options.windowMs;
       let samples = 0;
@@ -147,22 +163,24 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
       do {
         signal.throwIfAborted();
         const snapshot = await adapterClient.snapshot(options.requestTimeoutMs);
-        if (snapshot.revision < previousRevision)
-          throw new AdapterError('protocol', 'Snapshot revision moved backwards');
-        previousRevision = snapshot.revision;
+        if (snapshot.revision !== null) {
+          if (snapshot.revision < previousRevision)
+            throw new AdapterError('protocol', 'Snapshot revision moved backwards');
+          previousRevision = snapshot.revision;
+        }
         const index = project(snapshot.entries, projection);
         const differences = compare(truth.entries, index);
         samples++;
-        if (!snapshot.processing && differences.length > 0) idleMismatches++;
+        if (snapshot.processing === false && differences.length > 0) idleMismatches++;
         const elapsed = performance.now() - started;
         const late = elapsed > options.windowMs;
-        const match = differences.length === 0 && !snapshot.processing && !late;
+        const match = differences.length === 0 && snapshot.processing === false && !late;
         last = {
           id,
           name,
           status: match
             ? 'match'
-            : snapshot.processing || (late && differences.length === 0)
+            : snapshot.processing !== false || (late && differences.length === 0)
               ? 'inconclusive'
               : 'diverged',
           observedMs: Math.round(elapsed),
@@ -176,12 +194,12 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
         };
         observe(
           'snapshot',
-          `${name} · revision ${snapshot.revision} · ${snapshot.processing ? 'processing' : 'idle'}`,
+          `${name} · revision ${snapshot.revision ?? 'unavailable'} · ${snapshot.processing === null ? 'processing unavailable' : snapshot.processing ? 'processing' : 'idle'}`,
           { entries: index, revision: snapshot.revision, processing: snapshot.processing },
         );
         observe(
           'comparison',
-          `${name} · ${match ? 'checkpoint match' : `${differences.length} differences${snapshot.processing ? ' (processing pending)' : ''}${late ? ' (response after observation deadline)' : ''}`}`,
+          `${name} · ${match ? 'checkpoint match' : `${differences.length} differences${snapshot.processing === null ? ' (processing unavailable)' : snapshot.processing ? ' (processing pending)' : ''}${late ? ' (response after observation deadline)' : ''}`}`,
           { differences, checkpoint: name },
         );
         if (match) return last;
@@ -195,12 +213,18 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
     };
     const baseline = await checkpoint('Initial index');
     result.checkpoints.push(baseline);
-    if (baseline.status !== 'match') {
+    // Explicit unavailable signals permit collecting evidence from a matching data baseline,
+    // but never turn that baseline (or later samples) into an idle match or PASS.
+    if (
+      baseline.status !== 'match' &&
+      !(baseline.processing === null && baseline.differences.length === 0)
+    ) {
       result.status = 'not-ready';
       result.message =
         'Ready was received, but the initial index did not establish a matching baseline. Scenario operations were not started.';
       return result;
     }
+    let previousDisk = baseline.disk;
     for (const step of scenario.steps) {
       for (const operation of step.operations) {
         signal.throwIfAborted();
@@ -209,22 +233,36 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
         observe('operation', describeOperation(operation), operation);
       }
       observe('lifecycle', `Writes stopped · observing ${step.name}`);
-      result.checkpoints.push(await checkpoint(step.name));
+      const truth = await readDisk(tree, projection);
+      const checked =
+        projection.hash === 'sha256' || compare(previousDisk, truth.entries).length > 0;
+      const reason = checked
+        ? `Check ${describeProjection(projection)}`
+        : 'No selected path or type changed at this checkpoint. File content freshness is not checked in the paths projection.';
+      result.assertions.push({ step: step.name, checked, reason });
+      if (checked) result.checkpoints.push(await checkpoint(step.name, truth));
+      else observe('comparison', `${step.name} · NOT APPLICABLE: ${reason}`);
+      previousDisk = truth.entries;
     }
     client.assertHealthy();
-    if (result.checkpoints.some((c) => c.status === 'diverged')) {
+    if (!result.assertions.some((a) => a.checked)) {
+      result.status = 'unsupported';
+      result.message =
+        'Scenario is not applicable: no selected path or type changed at any checkpoint. Content freshness was not checked; this is not PASS.';
+    } else if (result.checkpoints.some((c) => c.status === 'diverged')) {
       result.status = 'diverged';
       result.message =
         'Index differs from disk in samples across the observation window. This does not identify a lost notification.';
     } else if (result.checkpoints.some((c) => c.status === 'inconclusive')) {
       result.status = 'inconclusive';
       result.message =
-        'The observation window could not establish convergence or repeated idle mismatches: processing was pending, a matching response was late, or too few samples arrived.';
+        'The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.';
     } else {
       result.status = 'pass';
-      result.message =
-        'Selected projection matched at every checked checkpoint. This does not prove correctness between checkpoints or for other scenarios.';
+      result.message = `Selected projection matched at every checked checkpoint: ${describeProjection(projection)} This does not prove correctness between checkpoints or for other scenarios.`;
     }
+    if (result.assertions.some((a) => !a.checked))
+      result.message += ` ${result.assertions.filter((a) => !a.checked).length} step(s) not applicable; see assertions.`;
   } catch (e) {
     if (input.signal?.aborted) {
       result.status = 'stopped';

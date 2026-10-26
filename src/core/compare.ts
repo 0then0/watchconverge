@@ -16,6 +16,12 @@ export function inScope(path: string, projection: Projection): boolean {
 export function project(entries: Entry[], projection: Projection): Entry[] {
   return entries
     .filter((e) => projection.types.includes(e.type) && inScope(e.path, projection))
+    .map(
+      (e): Entry =>
+        e.type === 'file' && projection.hash === 'sha256'
+          ? { path: e.path, type: e.type, hash: e.hash }
+          : { path: e.path, type: e.type },
+    )
     .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 /** Pure comparison. No watcher observations or filesystem access influence the verdict. */

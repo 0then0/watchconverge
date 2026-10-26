@@ -25,9 +25,13 @@ export async function readDisk(root: string, projection: Projection) {
         entries.push({
           path,
           type: 'file',
-          hash: createHash('sha256')
-            .update(await readFile(absolute))
-            .digest('hex'),
+          ...(projection.hash === 'sha256'
+            ? {
+                hash: createHash('sha256')
+                  .update(await readFile(absolute))
+                  .digest('hex'),
+              }
+            : {}),
         });
       else skipped.push(path);
     }

@@ -93,18 +93,24 @@ The [JSONL protocol](docs/protocol.md) defines readiness, request IDs, cached sn
 
 ## Interpret the result
 
-The adapter declares a projection: relative POSIX paths, regular-file/directory types, SHA-256 file content and literal exclusion prefixes. The root entry is omitted. The same projection filters disk and index. Defaults include both types and exclude nothing; hidden files are not implicitly excluded. Symlinks are not followed, and special files are outside the file model. Permissions, timestamps, inode identity and other metadata are not checked.
+The adapter declares a projection: relative POSIX paths, regular-file/directory types, an explicit `hash: "sha256"` or `hash: "none"` mode and literal exclusion prefixes. SHA-256 checks content; `none` checks paths and types without reading content. The root entry is omitted. The same projection filters disk and index. Defaults include both types and exclude nothing; hidden files are not implicitly excluded. Symlinks are not followed, and special files are outside the file model. Permissions, timestamps, inode identity and other metadata are not checked.
 
-Before scenario writes begin, the runner requires explicit readiness and a matching initial baseline. At each subsequent checkpoint, writes stop, the verifier walks the disk independently, and the runner samples the consumer cache.
+Before scenario writes begin, the runner requires explicit readiness and matching initial data. Adapters without revision/processing signals must explicitly declare that limitation; their baseline and subsequent comparisons remain INCONCLUSIVE and can never produce PASS. At each subsequent checkpoint, writes stop, the verifier walks the disk independently, and the runner samples the consumer cache.
 
 - **PASS:** an idle snapshot matched within the observation window at every checked checkpoint. It does not prove continuous agreement between samples or correctness for other scenarios.
 - **DIVERGED:** repeated idle snapshots still differed across a checkpoint's observation window. Differences identify missing paths, extra paths, content mismatches and type mismatches.
 - **NOT-READY:** readiness timed out or a matching initial baseline was not established. Scenario writes did not start.
-- **INCONCLUSIVE:** processing remained pending, a matching response arrived late, or too few idle snapshots arrived to establish repeated mismatches.
+- **INCONCLUSIVE:** processing remained pending or was explicitly unavailable, a matching response arrived late, or too few idle snapshots arrived to establish repeated mismatches.
 - **ERROR:** a process, filesystem, protocol, request-deadline or cleanup failure occurred. A nonzero adapter exit after acknowledging stop is still an error.
-- **STOPPED / UNSUPPORTED:** the run was cancelled or unavailable on this platform. Neither means PASS.
+- **STOPPED / UNSUPPORTED:** the run was cancelled, unavailable on this platform, or had no applicable assertions in its declared projection. Neither means PASS.
 
 A timeout alone does not prove event loss. Defaults are a 1,200 ms observation window, 1,500 ms snapshot-request deadline, 5,000 ms readiness deadline and 80 ms poll interval. A pending request may extend the checkpoint by its bounded deadline, but a late match cannot produce PASS. The overall run deadline is 120 seconds.
+
+With paths-only checking, same-path content edits are explicitly not applicable. A mixed scenario checks only its changed path/type checkpoints; all-inapplicable scenarios return UNSUPPORTED. CLI, UI, JSON and HTML retain the projection, limitations and per-step applicability. See [scenario applicability](docs/scenarios.md#applicability-to-paths-and-types).
+
+## FFF file-index lab
+
+The optional [FFF lab](labs/fff/README.md) uses the pinned Python SDK `fff-search 0.11.0` through the main runner, with no Python dependency in the application runtime. Snapshots query the existing native index and enforce completeness. Three repetitions of each selected scenario are retained, including infrastructure errors and a static-index negative control. FFF's public SDK does not expose index revision or watcher-queue state, so watched runs remain explicitly INCONCLUSIVE even when paths match. This does not establish a FFF defect or full idle convergence.
 
 ## External regression case: Bun #36328
 

@@ -1,0 +1,56 @@
+{
+  "environment": {
+    "watchconverge": "0.1.0",
+    "baseRevision": "71a4049ea9c10a47152cc29adf5d7bba867fdd8d",
+    "workingTree": "milestone changes; see source in checkout",
+    "node": "v24.22.1",
+    "python": "Python 3.13.16",
+    "fff": "0.11.0",
+    "platform": "darwin/arm64",
+    "osRelease": "24.6.0"
+  },
+  "config": {
+    "version": 1,
+    "repetitions": 3,
+    "deadlines": {
+      "readyTimeoutMs": 5000,
+      "requestTimeoutMs": 1500,
+      "windowMs": 1200,
+      "pollMs": 80
+    },
+    "modes": [
+      "watched",
+      "no-watch"
+    ],
+    "scenarios": [
+      "create",
+      "delete",
+      "directory-rename",
+      "recreate"
+    ],
+    "create": {
+      "version": 1,
+      "id": "create",
+      "name": "Create file",
+      "description": "An added file must appear in the existing file index.",
+      "initial": [
+        {
+          "path": "keep.txt",
+          "content": "keep\n"
+        }
+      ],
+      "steps": [
+        {
+          "name": "Create new.txt",
+          "operations": [
+            {
+              "kind": "write",
+              "path": "new.txt",
+              "content": "new\n"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

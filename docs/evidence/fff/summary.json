@@ -1,0 +1,218 @@
+[
+  {
+    "mode": "watched",
+    "scenario": "create",
+    "repetition": 1,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "create",
+    "repetition": 2,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "create",
+    "repetition": 3,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "delete",
+    "repetition": 1,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "delete",
+    "repetition": 2,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "delete",
+    "repetition": 3,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "directory-rename",
+    "repetition": 1,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived. 1 step(s) not applicable; see assertions.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "directory-rename",
+    "repetition": 2,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived. 1 step(s) not applicable; see assertions.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "directory-rename",
+    "repetition": 3,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived. 1 step(s) not applicable; see assertions.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "recreate",
+    "repetition": 1,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived. 1 step(s) not applicable; see assertions.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "recreate",
+    "repetition": 2,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived. 1 step(s) not applicable; see assertions.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "watched",
+    "scenario": "recreate",
+    "repetition": 3,
+    "status": "inconclusive",
+    "message": "The observation window could not establish convergence or repeated idle mismatches: processing was pending or unavailable, a matching response was late, or too few samples arrived. 1 step(s) not applicable; see assertions.",
+    "baseline": "inconclusive",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "create",
+    "repetition": 1,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "create",
+    "repetition": 2,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "create",
+    "repetition": 3,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "delete",
+    "repetition": 1,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "delete",
+    "repetition": 2,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "delete",
+    "repetition": 3,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "directory-rename",
+    "repetition": 1,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification. 1 step(s) not applicable; see assertions.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "directory-rename",
+    "repetition": 2,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification. 1 step(s) not applicable; see assertions.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "directory-rename",
+    "repetition": 3,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification. 1 step(s) not applicable; see assertions.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "recreate",
+    "repetition": 1,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification. 1 step(s) not applicable; see assertions.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "recreate",
+    "repetition": 2,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification. 1 step(s) not applicable; see assertions.",
+    "baseline": "match",
+    "cleaned": true
+  },
+  {
+    "mode": "no-watch",
+    "scenario": "recreate",
+    "repetition": 3,
+    "status": "diverged",
+    "message": "Index differs from disk in samples across the observation window. This does not identify a lost notification. 1 step(s) not applicable; see assertions.",
+    "baseline": "match",
+    "cleaned": true
+  }
+]

@@ -1,10 +1,10 @@
 export type Entry =
-  | { path: string; type: 'file'; hash: string }
+  | { path: string; type: 'file'; hash?: string }
   | { path: string; type: 'directory' };
 export interface Projection {
   paths: 'relative-posix';
   types: ('file' | 'directory')[];
-  hash: 'sha256';
+  hash: 'sha256' | 'none';
   excludes: string[];
 }
 export const DEFAULT_PROJECTION: Projection = {
@@ -13,6 +13,10 @@ export const DEFAULT_PROJECTION: Projection = {
   hash: 'sha256',
   excludes: [],
 };
+export function describeProjection(p: Projection): string {
+  return `${p.types.join(' + ')} · relative POSIX paths · ${p.hash === 'sha256' ? 'SHA-256 content' : 'paths and types only; file content is not checked'}. Excluded prefixes: ${p.excludes.join(', ') || 'none'}.`;
+}
+export type SnapshotSignals = 'reported' | 'unavailable';
 export type Difference = {
   path: string;
   kind: 'missing' | 'extra' | 'content-mismatch' | 'type-mismatch';
@@ -61,8 +65,8 @@ export interface Checkpoint {
   status: 'match' | 'diverged' | 'inconclusive';
   observedMs: number;
   samples: number;
-  revision: number;
-  processing: boolean;
+  revision: number | null;
+  processing: boolean | null;
   disk: Entry[];
   index: Entry[];
   differences: Difference[];
@@ -80,6 +84,9 @@ export interface RunResult {
   status: RunStatus;
   message: string;
   projection?: Projection;
+  snapshotSignals?: SnapshotSignals;
+  limitations: string[];
+  assertions: { step: string; checked: boolean; reason: string }[];
   options: { windowMs: number; requestTimeoutMs: number; readyTimeoutMs: number; pollMs: number };
   root?: string;
   cleaned: boolean;

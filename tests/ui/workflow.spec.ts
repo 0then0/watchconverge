@@ -1,8 +1,45 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { expect, test } from '@playwright/test';
+
+test('path-only scope, inapplicable content and unavailable processing remain visible', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel('Consumer adapter').selectOption('custom');
+  const argv = [
+    process.execPath,
+    fileURLToPath(new URL('../fixtures/adapter.mjs', import.meta.url)),
+  ];
+  await page
+    .getByLabel('Adapter command · JSON argv')
+    .fill(JSON.stringify([...argv, 'paths-frozen']));
+  await page.getByRole('combobox', { name: 'Scenario', exact: true }).selectOption('burst');
+  await page.getByRole('button', { name: 'Run scenario' }).click();
+  await expect(page.getByRole('status')).toHaveText('UNSUPPORTED');
+  await expect(page.locator('.scope-note')).toContainText(
+    'paths and types only; file content is not checked',
+  );
+  await expect(page.locator('.scope-note')).toContainText('NOT APPLICABLE: 20 overwrites');
+  const href = await page.getByRole('link', { name: 'Result JSON' }).getAttribute('href');
+  if (!href) throw new Error('Missing export');
+  const result = await (await page.request.get(href)).json();
+  expect(result.projection.hash).toBe('none');
+  expect(result.assertions[0].checked).toBe(false);
+  await page
+    .getByLabel('Adapter command · JSON argv')
+    .fill(JSON.stringify([...argv, 'unavailable']));
+  await page.getByRole('combobox', { name: 'Scenario', exact: true }).selectOption('delete');
+  await page.getByLabel('Observation window in milliseconds').fill('100');
+  await page.getByRole('button', { name: 'Run scenario' }).click();
+  await expect(page.getByRole('status')).toHaveText('INCONCLUSIVE');
+  await expect(page.getByText(/MS · REVISION UNAVAILABLE · PROCESSING UNAVAILABLE/)).toBeVisible();
+  await expect(page.locator('.scope-note')).toContainText(
+    'cannot establish idle convergence or PASS',
+  );
+});
 
 test('configure, run, inspect notifications, export and open offline report', async ({
   page,
