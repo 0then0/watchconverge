@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes target the latest published 0.1.x release and the main branch. Older versions are not maintained separately. Update to the latest patch release before reproducing an issue.
+Security fixes target the latest published release and the main branch. Older versions are not maintained separately. Update to the latest patch release before reproducing an issue.
 
 ## Report a vulnerability
 
