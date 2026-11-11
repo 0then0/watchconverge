@@ -2,6 +2,20 @@
 
 All notable user-facing changes are recorded here. Versions follow [Semantic Versioning](https://semver.org/). Protocol and result-format changes are documented explicitly; the project is currently in its initial 0.x series.
 
+## [Unreleased]
+
+### Added
+
+- `reduce` CLI command: bounded, sequential delta debugging that removes whole steps from a diverging scenario while one selected divergence still reproduces at its original checkpoint. Candidates need two reproductions, the result gets an independent control replay, and a new output directory receives `scenario.json`, `control.json` and a `reduction.json` journal. See [reducing a diverging scenario](docs/scenarios.md#reducing-a-diverging-scenario).
+- Result JSON additions: step checkpoints carry their zero-based `step` position, and ERROR or NOT-READY results carry a typed `failure` (failed operation with errno code, adapter error code, deadline or cleanup). Existing fields and statuses are unchanged.
+
+### Changed
+
+- Web interface: a compact introduction with a three-step explanation of a run, descriptions under the scenario, adapter and observation-window fields, color-coded run and checkpoint statuses, shortened hashes with the full value in a tooltip, a listed verification scope, larger small text and an export section consistent with the other steps. Statuses, exports and the HTTP API are unchanged.
+- Simplified project icon: disk and index entries side by side, with one differing index entry.
+- Documentation reorganized for first-time readers: a how-it-works overview and glossary in the README, a message-flow overview and structured result semantics in the protocol reference, and a shorter FFF lab guide.
+- The FFF lab runner records whether the working tree was clean or modified.
+
 ## [0.2.0] - 2026-10-26
 
 ### Added
@@ -15,8 +29,8 @@ All notable user-facing changes are recorded here. Versions follow [Semantic Ver
 ### Fixed
 
 - FFF adapter now observes stdin EOF while waiting for scan/watcher readiness and releases its native index and temporary resources. Added real-index lifecycle tests for EOF, stop and SIGTERM.
-- Narrowed adapter exception handling to expected SDK and stream failures, and bound the lifecycle test's phase predicate explicitly (Ruff BLE001 and B023).
-- Added a positive paths-only PASS regression over the existing real consumer's cache, with content-only assertions explicitly omitted.
+- FFF adapter treats only expected SDK and stream failures as fatal diagnostics instead of catching every exception.
+- Added a regression test for a paths-only PASS over a real consumer's cache, with content-only assertions explicitly omitted.
 
 ### Limitations
 

@@ -4,6 +4,9 @@ node_modules/
 .vite/
 .cache/
 *.tsbuildinfo
+.ruff_cache/
+__pycache__/
+.venv/
 
 # Build, coverage and browser-test output
 /dist/

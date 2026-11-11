@@ -33,16 +33,22 @@ Run `npm run build` before browser tests. On Linux, `npx playwright install --wi
 - `src/core/disk.ts` independently reads ground truth; `compare.ts` applies the projection and compares snapshots without consulting notifications.
 - `src/core/protocol.ts` validates JSONL and manages adapter requests, deadlines and process shutdown.
 - `src/adapters/demo.mjs` contains the intentionally broken file-watch consumer and the directory-invalidation example. Snapshot handlers must continue to read the cache without rescanning.
+- `src/core/reduce.ts` removes whole steps from a diverging scenario through repeated runner executions and writes the reduction artifacts.
 - `src/core/report.ts` produces escaped, script-free HTML for both CLI and UI exports.
 - `src/server.ts`, `src/ui/` and `src/cli.ts` provide the local HTTP interface, React UI and CLI.
 - `tests/` contains comparison, protocol, HTTP, CLI, real-watcher and browser tests. Protocol fault fixtures are not watcher demonstrations.
-- `scripts/bun-36328.mjs` is a standalone external regression probe; its source hash and raw results are documented in the [case study](docs/bun-36328.md).
+- `labs/fff/` is an optional Python lab for the FFF file index. It is not part of the application runtime or CI; see its [README](labs/fff/README.md).
+- `scripts/bun-36328.mjs` is a standalone external regression probe; its source hash and raw results are documented in the [case study](docs/bun-36328.md). Changing the file invalidates the recorded hash, so edit it only together with new recorded results.
 
 ## Preserve the experiment
 
 WatchConverge tests the consumer's cached state, not a required event sequence. Treat repeated, coalesced and filename-free notifications as observations. Keep ground-truth traversal independent of adapter reconciliation. Do not turn a timeout, unsupported platform or failed infrastructure check into PASS.
 
 All scenario writes must stay in tool-owned temporary trees. Symlinks must not be traversed. User adapters are trusted processes, not sandboxes. Protocol changes should preserve version and request-ID validation; changes to the scenario or result format need corresponding documentation and regression tests.
+
+## Dependencies
+
+Add a runtime or development dependency only when the change needs it, and update `package-lock.json` in the same commit. Dependabot checks npm and GitHub Actions dependencies monthly, groups minor and patch updates and opens major upgrades separately. Updates are reviewed and merged manually.
 
 ## Report a bug
 

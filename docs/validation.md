@@ -22,6 +22,7 @@ For targeted checks, use the commands in [CONTRIBUTING.md](../CONTRIBUTING.md). 
 - Checkpoint tests distinguish an on-time idle match, repeated idle differences, pending processing, late matching responses and insufficient samples. A processing-pending sample cannot count as evidence of repeated idle divergence.
 - HTTP tests preserve non-ASCII scenario data across split UTF-8 transport chunks, reject invalid UTF-8 and ensure exports are bound to the requested run UUID.
 - CLI tests exercise exports, fresh-tree replay and the documented `npm run --silent cli` command, including JSON-only stdout and the divergence exit code.
+- Reducer tests use a deterministic in-memory evaluator for step removal, rejection of other mismatches and changed disk state, invalid `rename`/`delete` candidates, repeated step names, unstable baselines and candidates, the exact execution budget, deadline, cancellation and output handling. The real CLI path reduces a stale-index scenario with the file-watch example on Linux/macOS, replays the result, and uses the directory-invalidation consumer as a negative control.
 - Real-watcher tests run all built-in scenarios against the directory-invalidation consumer. A test-only JSONL proxy also projects that existing cache to paths/types, verifying PASS after create/rename/delete with content-only assertions explicitly omitted. The file-watch example demonstrates stale inode subscriptions on Linux/macOS; Windows reports that example as unsupported.
 - Chromium tests exercise run/stop/error states, light/dark/system themes, malformed imports, stale-tab exports, notifications, disk/index differences and report downloads. The HTML report is opened through a local file URL without HTTP requests.
 
@@ -54,6 +55,10 @@ The runtime creates fixture/export directories in the container's `/tmp`; the so
 ### A watcher fails with EMFILE, ENOSPC or a permission error
 
 Check process file-descriptor limits, OS watcher limits and whether the execution environment permits native filesystem watchers. Some restricted environments reject directory watches even when file-descriptor limits are ample. Run the same test in a local environment that permits watchers. Keep the result as an infrastructure error; do not relabel it as lost events, a platform skip or PASS.
+
+### A real-watcher test diverges once and passes on rerun
+
+Real watcher delivery depends on timing and host load. During development on macOS, one full run reported a directory-rename divergence for the built-in directory-invalidation consumer that did not recur; its cause was not established. If you see this, rerun the affected test. If it repeats, keep the exported result and [report it](../CONTRIBUTING.md#report-a-bug) instead of raising deadlines or adding retries.
 
 ### Browser tests cannot start
 

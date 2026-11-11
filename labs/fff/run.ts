@@ -19,7 +19,9 @@ const rows: { mode: string; scenario: string; repetition: number; result: RunRes
 const environment = {
   watchconverge: JSON.parse(await readFile(join(directory, '../../package.json'), 'utf8')).version,
   baseRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-  workingTree: 'milestone changes; see source in checkout',
+  workingTree: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim()
+    ? 'modified'
+    : 'clean',
   node: process.version,
   python: execFileSync(python, ['--version'], { encoding: 'utf8' }).trim(),
   fff: execFileSync(python, ['-c', 'import fff; print(fff.__version__)'], {

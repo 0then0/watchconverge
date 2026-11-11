@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="public/icon.svg" alt="File tree and index with a marked discrepancy" width="80" height="80">
+  <img src="public/icon.svg" alt="Disk and index entries side by side, one index entry differs" width="80" height="80">
 </p>
 
 # WatchConverge
@@ -10,6 +10,22 @@
 Check whether a file index still matches the disk after an atomic save, rename, deletion or recreation.
 
 WatchConverge runs real filesystem operations in a temporary tree, requests the consumer's **existing cached view**, and compares it with an independent disk walk. Its verdict depends on state, not the number or order of watcher notifications. Use it to investigate stale indexes and build reproducible regression cases for indexers, development servers and file-sync tools.
+
+## How it works
+
+1. The runner creates a new temporary directory tree and writes the scenario's initial files.
+2. It starts your indexer through a small adapter process and waits until the adapter reports that its index and watchers are ready.
+3. It applies the scenario's file operations step by step. After each step, writes stop and a checkpoint begins.
+4. At a checkpoint the verifier walks the disk itself, the adapter returns the index it already holds, and the two are compared.
+5. The run ends with a status such as PASS or DIVERGED, a list of concrete differences and exportable evidence. The temporary tree is removed.
+
+Terms used throughout the documentation:
+
+- **Consumer** or **indexer**: the program under test that watches files and keeps a cached view of them.
+- **Adapter**: a child process that exposes the consumer's cached view to WatchConverge over the [JSONL protocol](docs/protocol.md).
+- **Scenario**: initial files plus an ordered list of steps. Each step is a group of file operations followed by a checkpoint.
+- **Projection**: what is compared, declared by the adapter: paths and entry types, optionally SHA-256 content hashes, minus excluded prefixes.
+- **Checkpoint**: one comparison of the independent disk walk with the adapter's snapshot, sampled over an observation window.
 
 ## Quickstart
 
@@ -34,17 +50,19 @@ The interface supports system, light and dark themes. One run is active at a tim
 
 ## Command line
 
+### Run a scenario
+
 ```sh
 npm run --silent cli -- --list
 npm run --silent cli -- --scenario atomic-save --adapter fixed --export
 npm run --silent cli -- --scenario atomic-save --adapter broken --json
 ```
 
-Use npm's `--silent` option when reading JSON from stdout. Running `node src/cli.ts` directly also produces clean JSON with `--json`.
+`--list` prints the built-in scenarios. `--adapter` selects one of the two built-in example consumers, `fixed` or `broken`, described [below](#scenarios-and-consumers). Use npm's `--silent` option when reading JSON from stdout. Running `node src/cli.ts` directly also produces clean JSON with `--json`.
 
 `--export` writes `scenario.json`, `result.json` and `report.html` to a separate tool-owned OS temporary directory and prints its path to stderr. The scenario's working tree is removed on completion, cancellation or error. Export files remain until you remove them or the OS clears temporary storage.
 
-To replay an exported scenario:
+### Replay an exported scenario
 
 ```sh
 npm run --silent cli -- --scenario-file /absolute/path/to/scenario.json --adapter fixed --json
@@ -52,7 +70,34 @@ npm run --silent cli -- --scenario-file /absolute/path/to/scenario.json --adapte
 
 Each replay creates a fresh tree. Operations and content are reproducible; notification sequences and exact timings vary across operating systems.
 
-CLI exit codes: `0` for PASS, `1` for DIVERGED, `2` for ERROR, NOT-READY or INCONCLUSIVE, `3` for STOPPED, and `4` for UNSUPPORTED. The broken consumer is expected to return `1` for the atomic-save example on Linux/macOS. Run `npm run --silent cli -- --help` for deadline options.
+### Reduce a diverging scenario
+
+To shrink a long diverging scenario by removing whole steps:
+
+```sh
+npm run --silent cli -- reduce --scenario-file /absolute/path/to/scenario.json --adapter broken --out /absolute/path/to/new-directory
+```
+
+`reduce` selects one divergence from a baseline run, keeps only candidates that reproduce it twice at the same checkpoint, and finishes with an independent control replay. It writes `scenario.json`, `control.json` and `reduction.json` to a directory that must not exist yet. See [reducing a diverging scenario](docs/scenarios.md#reducing-a-diverging-scenario) for the target identity, budgets and statuses.
+
+### Exit codes
+
+A run exits with:
+
+- `0`: PASS.
+- `1`: DIVERGED. The broken consumer is expected to return this for the atomic-save example on Linux/macOS.
+- `2`: ERROR, NOT-READY or INCONCLUSIVE, and invalid command-line input.
+- `3`: STOPPED.
+- `4`: UNSUPPORTED.
+
+`reduce` exits with:
+
+- `0`: the scenario was reduced or left unchanged, and the control replay reproduced the divergence.
+- `2`: the divergence was not reproducible, or infrastructure failed.
+- `3`: cancelled.
+- `5`: the execution budget or deadline stopped the search.
+
+Run `npm run --silent cli -- --help` for all options, including deadlines.
 
 ## Scenarios and consumers
 
@@ -108,15 +153,25 @@ A timeout alone does not prove event loss. Defaults are a 1,200 ms observation w
 
 With paths-only checking, same-path content edits are explicitly not applicable. A mixed scenario checks only its changed path/type checkpoints; all-inapplicable scenarios return UNSUPPORTED. CLI, UI, JSON and HTML retain the projection, limitations and per-step applicability. See [scenario applicability](docs/scenarios.md#applicability-to-paths-and-types).
 
-## FFF file-index lab
+## Case studies
+
+### FFF file-index lab
 
 The optional [FFF lab](labs/fff/README.md) uses the pinned Python SDK `fff-search 0.11.0` through the main runner, with no Python dependency in the application runtime. Snapshots query the existing native index and enforce completeness. Three repetitions of each selected scenario are retained, including infrastructure errors and a static-index negative control. FFF's public SDK does not expose index revision or watcher-queue state, so watched runs remain explicitly INCONCLUSIVE even when paths match. This does not establish a FFF defect or full idle convergence.
 
-## External regression case: Bun #36328
+### Bun #36328
 
 [Bun #36328](https://github.com/oven-sh/bun/issues/36328) reports atomic-save destination notifications missing on Bun **1.3.14**. [PR #31830](https://github.com/oven-sh/bun/pull/31830) corrected duplicate suppression across distinct paths/event types.
 
 A reproducible Linux arm64 probe uses actual release binaries and compares cached content with disk: Bun **1.3.14 diverged in 10/10 trials**, while **1.4.0 matched in 10/10**. The original Linux x86_64 environment and exact upstream canary build were not reproduced. See [the case study](docs/bun-36328.md) for revisions, immutable container images, commands and raw evidence. These results do not establish the earliest fixed release or a portable event sequence.
+
+## Documentation
+
+- [Scenario format](docs/scenarios.md): operations, limits, replay, reduction and paths-only applicability.
+- [Adapter protocol](docs/protocol.md): the JSONL messages an adapter exchanges with the runner, and how results are decided.
+- [Validation guide](docs/validation.md): what the test suite covers, platform notes and troubleshooting.
+- [Bun #36328 case study](docs/bun-36328.md) and [FFF lab](labs/fff/README.md): recorded experiments with their limits.
+- [Contribution guide](CONTRIBUTING.md): setup, checks and source layout.
 
 ## Development and validation
 
@@ -128,14 +183,14 @@ npm run validate
 
 `validate` runs Biome, TypeScript 7, the Vite production build, Node tests and Chromium tests. Use `npm run dev` for the React/Vite development interface. [CONTRIBUTING.md](CONTRIBUTING.md) describes individual checks and the source layout; the [validation guide](docs/validation.md) explains platform coverage, isolated Linux tests and troubleshooting.
 
-[CI](.github/workflows/ci.yml) checks Linux, macOS and Windows with Node 22 and 24. Unsupported cases have explicit skip reasons. Dependabot checks npm and GitHub Actions monthly, groups minor/patch updates, leaves major upgrades separate and limits open PRs. No automerge or security-update exclusion is configured.
+[CI](.github/workflows/ci.yml) checks Linux, macOS and Windows with Node 22 and 24. Tests that cannot run on a platform are skipped with an explicit reason.
 
 ## Scope and safety
 
 Scenario operations have no target-directory option and run only in fresh tool-owned temporary trees. The server binds to `127.0.0.1`, rejects foreign Host/Origin requests and requires JSON plus a custom header for mutations. Adapter code remains trusted code with normal process permissions.
 
-WatchConverge v0.2 handles regular files and directories on local filesystems. It does not provide a watcher backend, cloud service, kernel fault injection, network-filesystem testing or universal build-system validation. Normal completion, cancellation and error paths clean up the temporary tree; abrupt host termination or power loss can prevent cleanup. See [LICENSE](LICENSE) for Apache-2.0 terms.
+WatchConverge handles regular files and directories on local filesystems. It does not provide a watcher backend, cloud service, kernel fault injection, network-filesystem testing or universal build-system validation. Normal completion, cancellation and error paths clean up the temporary tree; abrupt host termination or power loss can prevent cleanup.
 
 ## Project information
 
-See the [changelog](CHANGELOG.md) for release changes, [contribution guide](CONTRIBUTING.md) for development, [code of conduct](CODE_OF_CONDUCT.md) for community expectations and [security policy](SECURITY.md) for private vulnerability reports. Source releases are available on [GitHub Releases](https://github.com/0then0/watchconverge/releases); this project is not published to npm.
+WatchConverge is licensed under [Apache-2.0](LICENSE). See the [changelog](CHANGELOG.md) for release changes, the [code of conduct](CODE_OF_CONDUCT.md) for community expectations and the [security policy](SECURITY.md) for private vulnerability reports. Report bugs and request features through [GitHub issues](https://github.com/0then0/watchconverge/issues). Source releases are available on [GitHub Releases](https://github.com/0then0/watchconverge/releases); this project is not published to npm.

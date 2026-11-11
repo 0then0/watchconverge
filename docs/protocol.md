@@ -1,6 +1,19 @@
 # WatchConverge adapter protocol v1
 
-An adapter is a trusted child process launched as an argv array, without a shell, with cwd set to the runner's fresh OS temporary tree. It has the user's normal process permissions. The protocol is not a sandbox. Its fixture access should be read-only; do not alter the tested files. Close any watchers and child processes on stop or stdin EOF.
+An adapter connects an indexer to WatchConverge. It starts the indexer on a directory chosen by the runner, reports when the index is ready, and returns the index's current cached contents whenever the runner asks. The runner compares those contents with its own walk of the disk.
+
+A run exchanges messages in this order:
+
+1. The runner sends `init` with the tree to index. The adapter answers `ready` and declares what its snapshots contain.
+2. The runner sends `snapshot` requests, first to check the initial index and then after each scenario step. The adapter answers each with its cached entries.
+3. At any time the adapter may send `event`, `processed` and `diagnostic` observations. They are recorded as evidence and do not decide the result.
+4. The runner sends `stop`. The adapter answers `stopped` and exits with code 0.
+
+The [built-in consumers](../src/adapters/demo.mjs) are complete working adapters of about 150 lines.
+
+## Process and transport
+
+An adapter is a trusted child process launched as an argv array, without a shell, with its working directory set to the runner's new temporary tree. It has the user's normal process permissions; the protocol is not a sandbox. Treat the tree as read-only and do not alter the tested files. Close any watchers and child processes on stop or stdin EOF.
 
 Transport is UTF-8 JSONL over stdin/stdout, one JSON object per newline. Every message has `v: 1` and a `type`. Put application logs on stderr, which is captured separately as diagnostics. Do not print banners to stdout. Each line must be newline terminated; a non-empty partial line at EOF is a protocol error. The stdout buffer limit is 1 MiB and a snapshot is limited to 10,000 entries. The runner retains at most 15,000 observations per run. Envelope errors, unknown versions/types, unexpected or duplicate IDs and fatal diagnostics are errors.
 
@@ -37,7 +50,7 @@ The projection is fixed for the whole run:
 - `hash`: required, exactly `sha256` or `none`. `sha256` requires 64 lowercase hexadecimal characters over the raw bytes of every regular file. `none` selects paths and types only: file entries need no hash and disk verification does not read file content. Missing, null or unknown `hash` is a protocol error, never an implicit downgrade. If a file hash is supplied in either mode it must be valid; valid hashes in `none` are discarded before comparison and retention.
 - `excludes`: up to 100 canonical relative path prefixes. A prefix excludes itself and descendants separated by `/`. `build` excludes `build/a`, but not `builder/a`. No globs, normalization, case-folding or implicit exclusions. The runner applies these prefixes to **both** disk and cached view. The adapter may omit excluded entries.
 
-Symlinks are never traversed or included; special files are outside v0.2's model. The verifier records skipped disk paths. Other metadata is ignored and not verified. For example, a paths-only file index declares `{"paths":"relative-posix","types":["file"],"hash":"none","excludes":[]}` and exports `{"path":"src/app.txt","type":"file"}`. Directory entries are not reconstructed from filenames; omit `directory` from `types` if the consumer does not expose directories. Snapshot entries are reduced to the declared path/type/hash projection before retention.
+Symlinks are never traversed or included; special files are outside the file model. The verifier records skipped disk paths. Other metadata is ignored and not verified. For example, a paths-only file index declares `{"paths":"relative-posix","types":["file"],"hash":"none","excludes":[]}` and exports `{"path":"src/app.txt","type":"file"}`. Directory entries are not reconstructed from filenames; omit `directory` from `types` if the consumer does not expose directories. Snapshot entries are reduced to the declared path/type/hash projection before retention.
 
 ## Snapshot requests
 
@@ -73,13 +86,13 @@ Return a consistent copy of the **existing index**, with at most one entry per p
 
 ### Consumers without observable completion signals
 
-An additive v1 extension allows a `ready` response to explicitly declare `"snapshotSignals": "unavailable"`. In that mode **both** `revision` and `processing` must be explicit JSON `null` on every snapshot. The adapter must still establish initial scan completion and watcher startup before ready. This declaration does not permit missing fields, inferred idle state, revision counters derived from snapshot requests, or weakening hash validation.
+Some indexers cannot report an index revision or whether work is pending. For them, a `ready` response may declare `"snapshotSignals": "unavailable"`. In that mode **both** `revision` and `processing` must be explicit JSON `null` on every snapshot. The adapter must still establish initial scan completion and watcher startup before ready. This declaration does not permit missing fields, inferred idle state, revision counters derived from snapshot requests, or weakening hash validation.
 
-Omitting `snapshotSignals` preserves the existing strict `reported` contract; an explicit `"reported"` is equivalent. Unknown declarations, nulls without the declaration, or invented boolean/numeric signals in unavailable mode are protocol errors. The declaration is fixed for the run.
+Omitting `snapshotSignals` means `"reported"`, the default contract described above; an explicit `"reported"` is equivalent. Unknown declarations, nulls without the declaration, or invented boolean/numeric signals in unavailable mode are protocol errors. The declaration is fixed for the run.
 
-Unavailable signals always produce INCONCLUSIVE checkpoints, even when data matches. Repeated differences are retained but cannot establish idle DIVERGED; they may still reflect unfinished processing. A data-equal initial sample at the end of the baseline window allows subsequent operations solely to collect evidence; the baseline remains INCONCLUSIVE. A mismatching initial view remains NOT-READY and prevents operations. No unavailable-signal run can be PASS. Use this mode to expose a public SDK limitation, not conceal it. Do not map `is_scanning` (an initial/full scan flag) or absence of callbacks to a watcher-queue idle assertion.
+Unavailable signals always produce INCONCLUSIVE checkpoints, even when data matches. Repeated differences are retained but cannot establish idle DIVERGED; they may still reflect unfinished processing. A data-equal initial sample at the end of the baseline window allows subsequent operations solely to collect evidence; the baseline remains INCONCLUSIVE. A mismatching initial view remains NOT-READY and prevents operations. No unavailable-signal run can be PASS. Use this mode to state an indexer's limitation openly. Do not derive an idle assertion from an initial-scan flag or from the absence of callbacks.
 
-These are compatible extensions for existing SHA-256 adapters and scenarios: their wire messages and strict result behavior are unchanged. Older runners reject the new paths projection or null signals rather than interpreting them with weaker checks.
+### Request rules and deadlines
 
 The runner permits one snapshot request at a time. Responses must echo its exact request ID. A snapshot has a default 1,500 ms response deadline; missing/malformed/late responses beyond the **request** deadline are infrastructure/protocol errors. A response that arrives within its request deadline but matches only after the **observation window** is inconclusive. It cannot produce PASS. No new snapshot is initiated after the observation window ends. An in-flight request can extend the elapsed checkpoint duration by its own bounded deadline.
 
@@ -124,6 +137,41 @@ Spawn failure, unexpected exit (even exit 0 during a request), broken stdin, inv
 
 ## Result semantics
 
-After writes stop, each checkpoint independently walks disk with the declared projection, then samples the existing cache. A match within the window with no pending processing ends that checkpoint early. Otherwise repeated sampled idle mismatches across the observation window are DIVERGED, while pending processing, a late matching response or only one mismatching sample is INCONCLUSIVE. The initial checkpoint gates readiness. Any diverged checkpoint makes the final run DIVERGED even if later checkpoints match; processing uncertainty cannot erase an already observed divergence.
+### Checkpoints
 
-Timeout alone never proves notification loss. PASS applies only to this projection and the applicable checked steps, with reported idle signals. For `hash: "none"`, a step whose final selected paths/types are unchanged from the preceding disk checkpoint is marked not applicable and has no cache checkpoint. This includes content-only overwrites, as well as any net-zero or entirely excluded path changes. Operations still execute; intermediate states within a step are not asserted. If every step is inapplicable the existing UNSUPPORTED status is used, never PASS. Mixed scenarios may PASS only the explicitly checked path assertions; content freshness is outside their scope. Results retain `projection`, `snapshotSignals`, `limitations` and per-step `assertions` (`step`, `checked`, `reason`) in JSON, CLI, UI and HTML. No new run status is introduced. It says nothing about other metadata, unseen intervals, other operating systems or all possible watcher races.
+After writes stop, each checkpoint walks the disk independently with the declared projection, then samples the existing cache until the observation window ends.
+
+- **Match**: a snapshot equals the disk within the window and reports no pending processing. The checkpoint ends early.
+- **Diverged**: at least two idle snapshots differed from the disk and the last sample in the window still did.
+- **Inconclusive**: processing was pending or unavailable, a matching response arrived after the window, or only one mismatching idle sample arrived.
+
+The initial checkpoint gates readiness: without a matching initial index the run is NOT-READY and no scenario operation starts.
+
+### Run status
+
+- Any diverged checkpoint makes the run DIVERGED, even if later checkpoints match. Processing uncertainty cannot erase an observed divergence.
+- Otherwise any inconclusive checkpoint makes the run INCONCLUSIVE.
+- PASS requires a match at every checked checkpoint, with reported idle signals. It applies only to the declared projection and the checked steps. It says nothing about other metadata, unseen intervals, other operating systems or all possible watcher races.
+- A timeout alone never proves notification loss.
+
+### Steps without an applicable check
+
+With `hash: "none"`, a step whose selected paths and types are unchanged from the preceding disk checkpoint is marked not applicable and has no cache checkpoint. This covers content-only overwrites and any net-zero or entirely excluded path changes. The operations still execute; intermediate states within a step are not asserted. If every step is inapplicable, the run is UNSUPPORTED, never PASS. A mixed scenario can PASS only its checked path assertions; content freshness is outside its scope.
+
+### Result fields
+
+Result JSON, the CLI, the UI and the HTML report retain `projection`, `snapshotSignals`, `limitations` and per-step `assertions` (`step`, `checked`, `reason`).
+
+Each step checkpoint carries `step`, its zero-based position in `scenario.steps`; the initial checkpoint has none. ERROR and NOT-READY results carry a typed `failure` when the cause is known:
+
+- `operation`: a scenario operation failed, with `step`, `operation` and the errno `code`.
+- `adapter`: a protocol or process failure, with the adapter error `code`, for example `ready-timeout`, `request-timeout`, `protocol` or `exit`.
+- `deadline`: the 120-second run deadline expired.
+- `cleanup`: the adapter or the temporary tree could not be cleaned up.
+- `internal`: any other failure.
+
+Read `failure` and checkpoint data instead of parsing `message`, whose wording may change.
+
+## Compatibility
+
+Every message carries `v: 1`. The paths-only projection (`hash: "none"`) and `snapshotSignals` were added in WatchConverge 0.2.0 without changing the messages or results of SHA-256 adapters. A 0.1.0 runner rejects both instead of applying weaker checks.
