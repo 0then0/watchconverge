@@ -154,7 +154,7 @@ function App() {
         <a className="brand" href="/" aria-label="WatchConverge home">
           <img src="/icon.svg" alt="" width="36" height="36" />
           <span>
-            WatchConverge<span className="version">v0.2</span>
+            WatchConverge<span className="version">v0.3</span>
           </span>
         </a>
         <div className="header-tools">
@@ -561,7 +561,7 @@ function App() {
           </div>
         </section>
         <footer>
-          <span>WatchConverge v0.2 · Apache-2.0</span>
+          <span>WatchConverge v0.3 · Apache-2.0</span>
           <a
             className="footer-link"
             href="https://github.com/0then0/watchconverge#readme"

@@ -2,7 +2,7 @@
 
 All notable user-facing changes are recorded here. Versions follow [Semantic Versioning](https://semver.org/). Protocol and result-format changes are documented explicitly; the project is currently in its initial 0.x series.
 
-## [Unreleased]
+## [0.3.0] - 2026-11-11
 
 ### Added
 
@@ -58,5 +58,6 @@ All notable user-facing changes are recorded here. Versions follow [Semantic Ver
 - The inode-bound demonstration is unsupported on Windows. Custom adapters are trusted processes, not sandboxes.
 - Only local regular files and directories are modeled; symlinks, network filesystems and arbitrary existing target trees are outside scope.
 
+[0.3.0]: https://github.com/0then0/watchconverge/releases/tag/v0.3.0
 [0.2.0]: https://github.com/0then0/watchconverge/releases/tag/v0.2.0
 [0.1.0]: https://github.com/0then0/watchconverge/releases/tag/v0.1.0
