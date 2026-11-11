@@ -13,6 +13,20 @@ type Catalog = {
 type State = { id: number; phase: string; observations: Observation[]; result?: RunResult };
 type Theme = 'system' | 'light' | 'dark';
 const pretty = (s: string) => s.replaceAll('-', ' ');
+/** Visual tone of a run or checkpoint status; it never changes the reported status text. */
+const tone = (status?: string) =>
+  status === 'pass' || status === 'match'
+    ? 'ok'
+    : status === 'diverged'
+      ? 'bad'
+      : status && status !== 'running'
+        ? 'warn'
+        : undefined;
+const EXPORTS = [
+  ['scenario.json', 'Scenario JSON', 'Replay the same operations'],
+  ['result.json', 'Result JSON', 'Complete machine-readable result'],
+  ['report.html', 'HTML report', 'Self-contained, opens offline'],
+] as const;
 async function api<T>(path: string, data?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, {
     signal,
@@ -144,8 +158,11 @@ function App() {
           </span>
         </a>
         <div className="header-tools">
-          <span className="local-label">
-            <span className="node" /> LOCAL ONLY
+          <span
+            className="local-label"
+            title="The server listens on 127.0.0.1 only. Nothing is uploaded."
+          >
+            <span className="node" /> Runs locally
           </span>
           <label className="theme-control">
             <span className="sr-only">Theme</span>
@@ -164,37 +181,38 @@ function App() {
       <main>
         <section className="intro">
           <div>
-            <p className="eyebrow">FILESYSTEM / CONSUMER / GROUND TRUTH</p>
             <h1>
-              Does your index
-              <br />
-              <span>match the disk?</span>
+              Does your index <span>match the disk?</span>
             </h1>
             <p className="intro-copy">
-              Verify a consumer’s cached view after filesystem changes.
-              <br className="wide-only" /> Real writes. Real watchers. Independently verified.
+              WatchConverge changes files in a temporary directory, then compares what your indexer
+              has cached with what is actually on disk. The verdict depends on that state, not on
+              the number or order of watcher events.
             </p>
           </div>
-          <div className="schematic" aria-hidden="true">
-            <div className="schema-label">
-              DISK <span>INDEX</span>
-            </div>
-            <svg viewBox="0 0 260 138" fill="none">
-              <title>File tree and index comparison</title>
-              <g stroke="currentColor" strokeWidth="1">
-                <path d="M20 18v103m0-88h55m-55 39h55m-55 39h55M75 23h24v20H75zm0 39h24v20H75zm0 39h24v20H75z" />
-                <path d="M173 33h65m-65 78h65" />
-                <path d="M111 33h50m-50 78h50" strokeDasharray="3 5" />
-              </g>
-              <path d="M132 12v116" stroke="#7089ba" strokeDasharray="2 5" />
-              <g stroke="#7089ba" strokeWidth="2">
-                <path d="m185 64 16 16m0-16-16 16" />
-                <path d="M111 72h50" strokeDasharray="3 5" />
-              </g>
-              <circle cx="20" cy="18" r="3" fill="#7089ba" />
-            </svg>
-            <p>One path. Two views.</p>
-          </div>
+          <ol className="how" aria-label="How a run works">
+            <li className="how-step">
+              <b>1</b>
+              <span>
+                <strong>Change files</strong>
+                Real operations in a new temporary directory.
+              </span>
+            </li>
+            <li className="how-step">
+              <b>2</b>
+              <span>
+                <strong>Read the index</strong>
+                The consumer returns the cache it already holds.
+              </span>
+            </li>
+            <li className="how-step">
+              <b>3</b>
+              <span>
+                <strong>Compare with disk</strong>
+                An independent walk, path by path.
+              </span>
+            </li>
+          </ol>
         </section>
         {error && (
           <div className="error-banner" role="alert">
@@ -210,65 +228,84 @@ function App() {
             <h2 id="configure-title">
               <span className="section-number">01</span> Configure a run
             </h2>
-            <span className="micro">OWNED TEMPORARY TREE</span>
           </div>
           <form onSubmit={(e) => void start(e)}>
             <div className="config-fields">
-              <label>
-                Scenario
-                <select
-                  value={imported ? 'imported' : scenarioId}
-                  disabled={running || !catalog}
-                  onChange={(e) => {
-                    setImported(undefined);
-                    setScenarioId(e.target.value);
-                  }}
-                >
-                  {catalog?.scenarios.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                  {imported && <option value="imported">Imported · {imported.name}</option>}
-                </select>
-              </label>
-              <label>
-                Consumer adapter
-                <select
-                  value={adapter}
-                  disabled={running || !catalog}
-                  onChange={(e) => setAdapter(e.target.value)}
-                >
-                  {catalog?.adapters.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                      {a.id === 'broken' &&
-                      catalog.platform !== 'darwin' &&
-                      catalog.platform !== 'linux'
-                        ? ' (unsupported here)'
-                        : ''}
-                    </option>
-                  ))}
-                  <option value="custom">Custom JSONL adapter…</option>
-                </select>
-              </label>
-              <label className="window-field">
-                Observation window{' '}
-                <span className="input-unit">
-                  <input
-                    aria-label="Observation window in milliseconds"
-                    type="number"
-                    required
-                    min="100"
-                    max="10000"
-                    step="100"
-                    value={windowMs}
-                    disabled={running}
-                    onChange={(e) => setWindowMs(Number(e.target.value))}
-                  />
-                  <span>ms</span>
-                </span>
-              </label>
+              <div className="field">
+                <label>
+                  Scenario
+                  <select
+                    value={imported ? 'imported' : scenarioId}
+                    disabled={running || !catalog}
+                    aria-describedby="scenario-help"
+                    onChange={(e) => {
+                      setImported(undefined);
+                      setScenarioId(e.target.value);
+                    }}
+                  >
+                    {catalog?.scenarios.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                    {imported && <option value="imported">Imported · {imported.name}</option>}
+                  </select>
+                </label>
+                <p className="hint" id="scenario-help">
+                  {scenario?.description ?? 'Connecting to the local runner…'}
+                </p>
+              </div>
+              <div className="field">
+                <label>
+                  Consumer adapter
+                  <select
+                    value={adapter}
+                    disabled={running || !catalog}
+                    aria-describedby="adapter-help"
+                    onChange={(e) => setAdapter(e.target.value)}
+                  >
+                    {catalog?.adapters.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                        {a.id === 'broken' &&
+                        catalog.platform !== 'darwin' &&
+                        catalog.platform !== 'linux'
+                          ? ' (unsupported here)'
+                          : ''}
+                      </option>
+                    ))}
+                    <option value="custom">Custom JSONL adapter…</option>
+                  </select>
+                </label>
+                <p className="hint" id="adapter-help">
+                  {adapter === 'custom'
+                    ? 'Your own indexer, connected through the adapter command below.'
+                    : `Built-in example. ${catalog?.adapters.find((a) => a.id === adapter)?.description ?? ''}`}
+                </p>
+              </div>
+              <div className="field window-field">
+                <label>
+                  Observation window{' '}
+                  <span className="input-unit">
+                    <input
+                      aria-label="Observation window in milliseconds"
+                      aria-describedby="window-help"
+                      type="number"
+                      required
+                      min="100"
+                      max="10000"
+                      step="100"
+                      value={windowMs}
+                      disabled={running}
+                      onChange={(e) => setWindowMs(Number(e.target.value))}
+                    />
+                    <span>ms</span>
+                  </span>
+                </label>
+                <p className="hint" id="window-help">
+                  How long each checkpoint waits for the index to catch up.
+                </p>
+              </div>
             </div>
             {adapter === 'custom' && (
               <div className="custom-adapter">
@@ -292,7 +329,7 @@ function App() {
               </div>
             )}
             <div className="config-description">
-              <p>{scenario?.description ?? 'Connecting to the local runner…'}</p>
+              <p className="micro">Steps · the index is checked after each one</p>
               <ol className="scenario-sequence" aria-label="Scenario checkpoints">
                 {scenario?.steps.map((step, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: Scenario steps are immutable and never reordered in this preview.
@@ -307,7 +344,6 @@ function App() {
               <div>
                 <button className="run-button" type="submit" disabled={running || !catalog}>
                   {running ? 'Run in progress' : 'Run scenario'}
-                  <span aria-hidden="true">↗</span>
                 </button>
                 {running && (
                   <button type="button" onClick={() => void stop()} disabled={stopping}>
@@ -328,11 +364,7 @@ function App() {
                   />
                 </label>
               </div>
-              <p>
-                New tree on every run.
-                <br />
-                Removed after completion or stop.
-              </p>
+              <p>Each run uses a new temporary directory and removes it afterwards.</p>
             </div>
           </form>
         </section>
@@ -341,7 +373,11 @@ function App() {
             <h2 id="verify-title">
               <span className="section-number">02</span> Verify convergence
             </h2>
-            <span className="status-chip" role="status">
+            <span
+              className="status-chip"
+              role="status"
+              data-tone={running ? undefined : tone(result?.status)}
+            >
               {running
                 ? stopping
                   ? 'STOPPING'
@@ -353,7 +389,7 @@ function App() {
           </div>
           <div className="verdict">
             <div>
-              <h3>
+              <h3 data-tone={running ? undefined : tone(result?.status)}>
                 {running
                   ? 'Watching the consumer catch up…'
                   : result
@@ -398,7 +434,7 @@ function App() {
                   aria-pressed={checkpoint === c}
                   onClick={() => setCheckpointIndex(i)}
                 >
-                  <span className="node" />
+                  <span className="node" data-tone={tone(c.status)} />
                   {c.name}
                   <span className="micro">{c.status.toUpperCase()}</span>
                 </button>
@@ -407,36 +443,35 @@ function App() {
           )}
           <Comparison checkpoint={checkpoint} />
           <div className="scope-note">
-            <span className="node" />
-            <p>
-              {result?.projection
-                ? `Projection: ${describeProjection(result.projection)}`
-                : 'Default projection: files + directories · relative paths · SHA-256 content.'}
-              <br />
-              Metadata is outside this check. Symlinks are not followed. PASS applies only to the
-              selected projection, scenario and checked checkpoints.
+            <h3>{result ? 'What this run checked' : 'What a run checks'}</h3>
+            <ul>
+              <li>
+                {result?.projection
+                  ? `Projection: ${describeProjection(result.projection)}`
+                  : 'Default projection: files + directories · relative paths · SHA-256 content.'}
+              </li>
+              <li>Metadata is outside this check. Symlinks are not followed.</li>
+              <li>
+                PASS applies only to the selected projection, scenario and checked checkpoints.
+              </li>
               {result?.limitations.map((limitation) => (
-                <React.Fragment key={limitation}>
-                  <br />
-                  {limitation}
-                </React.Fragment>
+                <li key={limitation}>{limitation}</li>
               ))}
               {result?.assertions
                 .filter((a) => !a.checked)
                 .map((a, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: Assertions follow immutable scenario steps.
-                  <React.Fragment key={i}>
-                    <br />
+                  <li key={i}>
                     NOT APPLICABLE: {a.step}. {a.reason}
-                  </React.Fragment>
+                  </li>
                 ))}
-            </p>
+            </ul>
           </div>
         </section>
         <section className="timeline-section" aria-labelledby="timeline-title">
           <div className="section-heading">
             <h2 id="timeline-title">
-              <span className="section-number">03</span> Operations & observations
+              <span className="section-number">03</span> Timeline
             </h2>
             <label>
               <span className="sr-only">Timeline filter</span>
@@ -489,47 +524,52 @@ function App() {
               <p>
                 {observations.length
                   ? 'No observations match this filter.'
-                  : 'Your run will leave a trace here.'}
-                <small>Writes, notifications, processing and comparisons appear separately.</small>
+                  : 'Nothing has run yet.'}
+                <small>
+                  File operations, watcher notifications, index updates and comparisons are listed
+                  here in order.
+                </small>
               </p>
             </div>
           )}
         </section>
         <section className="export-section" aria-labelledby="export-title">
-          <div>
-            <p className="eyebrow">KEEP THE EVIDENCE</p>
-            <h2 id="export-title">Export the evidence.</h2>
-            <p>
-              A replayable scenario, the full result, or a self-contained report.
-              <br />
-              The HTML report opens offline with no external assets.
-            </p>
+          <div className="section-heading">
+            <h2 id="export-title">
+              <span className="section-number">04</span> Export the evidence
+            </h2>
+            {!result && <span className="micro">Available after a run</span>}
           </div>
           <div className="export-links">
-            {['scenario.json', 'result.json', 'report.html'].map((file, i) =>
+            {EXPORTS.map(([file, label, description]) =>
               result ? (
                 <a
                   key={file}
                   href={`/api/export/${file}?runId=${encodeURIComponent(result.id)}`}
                   download
                 >
-                  <span className="micro">0{i + 1}</span>
-                  {['Scenario JSON', 'Result JSON', 'HTML report'][i]}
-                  <span aria-hidden="true">↓</span>
+                  <strong>{label}</strong>
+                  <small>{description}</small>
                 </a>
               ) : (
                 <span className="export-disabled" key={file}>
-                  <span className="micro">0{i + 1}</span>
-                  {['Scenario JSON', 'Result JSON', 'HTML report'][i]}
-                  <span aria-hidden="true">↓</span>
+                  <strong>{label}</strong>
+                  <small>{description}</small>
                 </span>
               ),
             )}
           </div>
         </section>
         <footer>
-          <span>WatchConverge / v0.2</span>
-          <span>Local files. Bounded observations. Explicit scope.</span>
+          <span>WatchConverge v0.2 · Apache-2.0</span>
+          <a
+            className="footer-link"
+            href="https://github.com/0then0/watchconverge#readme"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Documentation
+          </a>
         </footer>
       </main>
     </>
@@ -540,7 +580,9 @@ function EntryView({ entry }: { entry?: Entry }) {
     <>
       <span className="entry-type">{entry.type}</span>
       {entry.type === 'file' && (
-        <code title={entry.hash}>{entry.hash ?? 'content not checked'}</code>
+        <code title={entry.hash ? `SHA-256 ${entry.hash}` : undefined}>
+          {entry.hash ? `${entry.hash.slice(0, 16)}…` : 'content not checked'}
+        </code>
       )}
     </>
   ) : (
@@ -556,7 +598,7 @@ function Comparison({ checkpoint }: { checkpoint?: Checkpoint }) {
   return (
     <div className="comparison">
       <div className="comparison-header">
-        <span>PATH / COMPARISON</span>
+        <span>PATH</span>
         <span>
           DISK <small>independent walk</small>
         </span>
@@ -584,7 +626,9 @@ function Comparison({ checkpoint }: { checkpoint?: Checkpoint }) {
                 <div className={`comparison-row ${diff ? 'different' : ''}`} key={path}>
                   <div>
                     <code>{path}</code>
-                    <span className="difference-label">{diff ? pretty(diff.kind) : 'match'}</span>
+                    <span className="difference-label" data-tone={diff ? 'bad' : 'ok'}>
+                      {diff ? pretty(diff.kind) : 'match'}
+                    </span>
                   </div>
                   <div data-testid={`disk-${path}`}>
                     <span className="sr-only">Disk {path}</span>
@@ -606,11 +650,8 @@ function Comparison({ checkpoint }: { checkpoint?: Checkpoint }) {
         </>
       ) : (
         <div className="empty-comparison">
-          <span className="brackets" aria-hidden="true">
-            [ &nbsp; ≍ &nbsp; ]
-          </span>
-          <h4>No snapshots yet</h4>
-          <p>Disk and index will be compared here, path by path.</p>
+          <h4>No comparison yet</h4>
+          <p>After a run, every path is listed here with its state on disk and in the index.</p>
         </div>
       )}
     </div>
