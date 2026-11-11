@@ -62,6 +62,8 @@ export interface Observation {
 export interface Checkpoint {
   id: string;
   name: string;
+  /** Zero-based position in `scenario.steps`; absent for the initial index checkpoint. */
+  step?: number;
   status: 'match' | 'diverged' | 'inconclusive';
   observedMs: number;
   samples: number;
@@ -72,6 +74,13 @@ export interface Checkpoint {
   differences: Difference[];
   skipped: string[];
 }
+/** Typed cause of an ERROR or NOT-READY run. Consumers must not parse `message`. */
+export type RunFailure =
+  | { kind: 'operation'; step: number; operation: number; code: string | null }
+  | { kind: 'adapter'; code: string }
+  | { kind: 'deadline' }
+  | { kind: 'cleanup' }
+  | { kind: 'internal' };
 export interface RunResult {
   version: 1;
   id: string;
@@ -83,6 +92,7 @@ export interface RunResult {
   finishedAt?: string;
   status: RunStatus;
   message: string;
+  failure?: RunFailure;
   projection?: Projection;
   snapshotSignals?: SnapshotSignals;
   limitations: string[];

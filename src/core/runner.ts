@@ -39,6 +39,19 @@ export interface RunOptions {
   signal?: AbortSignal;
   onObservation?: (observation: Observation) => void;
 }
+/** A scenario operation failed on the host filesystem; `code` is the errno when available. */
+class OperationError extends Error {
+  step: number;
+  operation: number;
+  code: string | null;
+  constructor(step: number, operation: number, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.step = step;
+    this.operation = operation;
+    const code = (cause as NodeJS.ErrnoException | undefined)?.code;
+    this.code = typeof code === 'string' ? code : null;
+  }
+}
 function bounded(value: number | undefined, fallback: number, min: number, max: number): number {
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < min || result > max)
@@ -89,10 +102,11 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
   }
   let client: AdapterClient | undefined, root: string | undefined;
   const deadline = new AbortController();
-  const timer = setTimeout(
-    () => deadline.abort(new Error('Overall run deadline exceeded (120 s)')),
-    120000,
-  );
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    deadline.abort(new Error('Overall run deadline exceeded (120 s)'));
+  }, 120000);
   const signal = input.signal ? AbortSignal.any([input.signal, deadline.signal]) : deadline.signal;
   try {
     signal.throwIfAborted();
@@ -150,6 +164,7 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
     const checkpoint = async (
       name: string,
       truth?: Awaited<ReturnType<typeof readDisk>>,
+      step?: number,
     ): Promise<Checkpoint> => {
       const id = randomUUID();
       signal.throwIfAborted();
@@ -178,6 +193,7 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
         last = {
           id,
           name,
+          ...(step === undefined ? {} : { step }),
           status: match
             ? 'match'
             : snapshot.processing !== false || (late && differences.length === 0)
@@ -225,11 +241,15 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
       return result;
     }
     let previousDisk = baseline.disk;
-    for (const step of scenario.steps) {
-      for (const operation of step.operations) {
+    for (const [stepIndex, step] of scenario.steps.entries()) {
+      for (const [operationIndex, operation] of step.operations.entries()) {
         signal.throwIfAborted();
         client.assertHealthy();
-        await perform(root, operation);
+        try {
+          await perform(root, operation);
+        } catch (e) {
+          throw new OperationError(stepIndex, operationIndex, e);
+        }
         observe('operation', describeOperation(operation), operation);
       }
       observe('lifecycle', `Writes stopped · observing ${step.name}`);
@@ -240,7 +260,7 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
         ? `Check ${describeProjection(projection)}`
         : 'No selected path or type changed at this checkpoint. File content freshness is not checked in the paths projection.';
       result.assertions.push({ step: step.name, checked, reason });
-      if (checked) result.checkpoints.push(await checkpoint(step.name, truth));
+      if (checked) result.checkpoints.push(await checkpoint(step.name, truth, stepIndex));
       else observe('comparison', `${step.name} · NOT APPLICABLE: ${reason}`);
       previousDisk = truth.entries;
     }
@@ -271,6 +291,14 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
       result.status =
         e instanceof AdapterError && e.code === 'ready-timeout' ? 'not-ready' : 'error';
       result.message = e instanceof Error ? e.message : String(e);
+      result.failure =
+        e instanceof OperationError
+          ? { kind: 'operation', step: e.step, operation: e.operation, code: e.code }
+          : timedOut
+            ? { kind: 'deadline' }
+            : e instanceof AdapterError
+              ? { kind: 'adapter', code: e.code }
+              : { kind: 'internal' };
     }
   } finally {
     clearTimeout(timer);
@@ -279,6 +307,7 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
     } catch (e) {
       result.status = 'error';
       result.message = `Adapter cleanup failed: ${String(e)}`;
+      result.failure = { kind: 'cleanup' };
     }
     try {
       if (root) await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
@@ -286,6 +315,7 @@ export async function runScenario(input: RunOptions): Promise<RunResult> {
     } catch (e) {
       result.status = 'error';
       result.message = `Temporary tree cleanup failed: ${String(e)}`;
+      result.failure = { kind: 'cleanup' };
     }
     result.finishedAt = new Date().toISOString();
     if (result.observations.length < 15000)
@@ -304,7 +334,9 @@ async function safeParents(root: string, relative: string) {
     current = join(current, part);
     try {
       if (!(await lstat(current)).isDirectory())
-        throw new Error('Operation parent is not a regular directory');
+        throw Object.assign(new Error('Operation parent is not a regular directory'), {
+          code: 'ENOTDIR',
+        });
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === 'ENOENT') await mkdir(current);
       else throw e;
